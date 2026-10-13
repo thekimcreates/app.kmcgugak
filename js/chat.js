@@ -138,6 +138,9 @@ export function createChat(ctx) {
   const members = () => [
     ...new Map([...ctx.members(), ...profiles].map((m) => [m.id, m])).values(),
   ];
+  function closeRooms() {
+    for (const room of [...rooms]) room.close(true);
+  }
   function reset() {
     generation++;
     stopInbox?.();
@@ -265,7 +268,16 @@ export function createChat(ctx) {
         list.append(
           el(
             "button",
-            { class: "inbox-row", type: "button", onClick: () => open(thread) },
+            {
+              class: "inbox-row",
+              type: "button",
+              "aria-current": [...rooms].some(
+                (room) => room.threadId === thread.id,
+              )
+                ? "true"
+                : null,
+              onClick: () => open(thread),
+            },
             [
               image,
               el("div", { class: "row-copy" }, [
@@ -289,6 +301,13 @@ export function createChat(ctx) {
     }
     search.oninput = rows;
     container.replaceChildren(toolbar, search, list);
+    container.append(
+      el("div", {
+        class: "chat-idle",
+        "aria-hidden": "true",
+        html: icon("chat"),
+      }),
+    );
     rows();
     if (threads.length <= 1)
       container.append(
@@ -404,6 +423,7 @@ export function createChat(ctx) {
     redraw();
   }
   function open(thread) {
+    closeRooms();
     const member = ctx.account();
     if (!member) return;
     let stop = null,
@@ -420,6 +440,7 @@ export function createChat(ctx) {
     const key = `kmc.draft.${member.id}.${thread.id}`;
     const layer = sheet(threadTitle(thread, member.id, members()), {
       full: true,
+      workspace: true,
       onClose: () => {
         stop?.();
         clearTimeout(draftTimer);
@@ -432,6 +453,9 @@ export function createChat(ctx) {
     });
     rooms.add(layer);
     layer.panel.classList.add("conversation");
+    layer.overlay.classList.add("conversation-layer");
+    layer.threadId = thread.id;
+    draw();
     const input = el("textarea", {
       rows: "1",
       maxlength: "4000",
@@ -1014,6 +1038,7 @@ export function createChat(ctx) {
   }
   return {
     render,
+    closeRooms,
     reset,
     open,
     refreshProfile: async (member) => {

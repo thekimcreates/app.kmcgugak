@@ -1,0 +1,393 @@
+/* Desktop layout for the browser port. Mobile controls remain below 960px. */
+:root {
+  --rail: 216px;
+  --inbox: 330px;
+}
+.chat-idle {
+  display: none;
+}
+button,
+a,
+input,
+textarea,
+select {
+  outline-offset: 4px;
+}
+button:focus-visible,
+a:focus-visible {
+  outline: 3px solid var(--brand);
+}
+@media (min-width: 960px) {
+  #app {
+    max-width: none;
+    margin-left: var(--rail);
+  }
+  .page {
+    min-height: 100dvh;
+    max-width: 1480px;
+    margin-inline: auto;
+    padding: 36px clamp(28px, 3.5vw, 64px) 56px;
+  }
+  #performances {
+    left: var(--rail);
+    max-width: none;
+    margin: 0;
+    padding: 0;
+  }
+  #tabs {
+    inset: 0 auto 0 0;
+    bottom: 0;
+    left: 0;
+    transform: none;
+    width: var(--rail);
+    height: 100dvh;
+    padding: 30px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    border-radius: 0;
+    border: 0;
+    border-right: 1px solid var(--line);
+    background: var(--surface);
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    overflow-y: auto;
+  }
+  #tabs::before {
+    content: "";
+    display: block;
+    flex: 0 0 86px;
+    margin: 0 8px 26px;
+    background: url("./assets/branding/kmc-gugak-full-logo.png") left center /
+      contain no-repeat;
+  }
+  #tabs button {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 14px;
+    padding: 15px 16px;
+    border-radius: 13px;
+    font-size: 1rem;
+    min-height: 54px;
+  }
+  #tabs button span:last-child {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  #tabs button svg {
+    width: 23px;
+    height: 23px;
+  }
+  #tabs button:hover {
+    background: var(--bubble);
+  }
+  #tabs button[aria-current="page"] {
+    background: #8b233212;
+    color: var(--brand);
+    font-weight: 700;
+  }
+  #status {
+    position: sticky;
+    top: 0;
+    text-align: center;
+  }
+  h1 {
+    font-size: clamp(2rem, 3vw, 2.75rem);
+    letter-spacing: -0.045em;
+  }
+  h2 {
+    font-size: 1.35rem;
+  }
+  #home > .toolbar {
+    min-height: 46px;
+    margin-bottom: 8px;
+  }
+  #home > .toolbar .logo {
+    display: none;
+  }
+  .section-heading {
+    margin: 32px 0 14px;
+  }
+  .section-heading h2 {
+    margin: 0;
+  }
+  .next-up-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr));
+    gap: 24px;
+  }
+  .event-card {
+    margin: 0;
+    min-width: 0;
+    display: flex;
+    align-items: stretch;
+  }
+  .event-card img {
+    width: 42%;
+    aspect-ratio: auto;
+    object-fit: cover;
+  }
+  .event-copy {
+    padding: 24px;
+    flex: 1;
+    min-width: 0;
+  }
+  .event-card h3 {
+    font-size: 1.35rem;
+  }
+  .event-actions {
+    margin-top: 20px;
+  }
+  .stat {
+    padding: 24px 28px;
+    margin: 30px 0;
+    display: flex;
+    align-items: baseline;
+    gap: 7px;
+    flex-wrap: wrap;
+  }
+  .stat strong {
+    font-size: 2rem;
+  }
+  .schedule-row {
+    padding: 21px 8px;
+    border-radius: 8px;
+  }
+  .schedule-row:hover {
+    background: var(--surface);
+  }
+  .schedule-row > div {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 24px;
+    align-items: center;
+  }
+  .schedule-row strong {
+    margin: 0;
+    font-size: 1.075rem;
+  }
+  .schedule-row .meta {
+    text-align: right;
+    font-size: 0.95rem;
+  }
+  .recent-strip {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 22px;
+    overflow: visible;
+  }
+  .recent-card {
+    min-width: 0;
+    width: 100%;
+    border-radius: 16px;
+  }
+  .recent-card .event-copy {
+    padding: 18px 20px 22px;
+  }
+  .recent-card strong {
+    font-size: 1.1rem;
+    line-height: 1.4;
+  }
+  .recent-card .meta {
+    font-size: 0.9rem;
+    margin-bottom: 9px;
+  }
+  .recent-card:hover {
+    border-color: var(--brand);
+    box-shadow: 0 5px 24px #2313180b;
+  }
+  #profile .profile-summary {
+    display: grid; grid-template-columns: 88px minmax(0, 1fr); column-gap: 24px; row-gap: 8px;
+    align-items: center; text-align: left; padding: 32px 0;
+  }
+  #profile .profile-summary .avatar { grid-column: 1; grid-row: 1 / 3; }
+  #profile .profile-summary h2 { grid-column: 2; align-self: end; margin: 0; overflow-wrap: anywhere; }
+  #profile .profile-summary p { grid-column: 2; align-self: start; margin: 0; }
+  .guest {
+    min-height: 55dvh;
+    max-width: 500px;
+    justify-content: center;
+  }
+  .overlay {
+    align-items: center;
+    padding: 32px;
+  }
+  .panel {
+    width: min(600px, 100%);
+    height: auto;
+    max-height: min(82dvh, 850px);
+    min-height: 240px;
+    border-radius: 22px;
+    box-shadow: 0 24px 90px #0003;
+    animation: desktop-dialog 0.2s ease;
+  }
+  .panel.full {
+    width: min(1200px, 100%);
+    height: 86dvh;
+    border-radius: 22px;
+    padding-top: 0;
+  }
+  .panel .handle {
+    display: none;
+  }
+  .panel-header {
+    padding: 16px 20px;
+    min-height: 76px;
+    touch-action: auto;
+  }
+  .panel-header h2 {
+    font-size: 1.2rem;
+  }
+  .panel-body {
+    padding: 24px 28px 30px;
+  }
+  .panel-header .icon-button {
+    order: 2;
+  }
+  .panel-header h2 {
+    order: 0;
+  }
+  .panel-header > :not(h2):not(.icon-button) {
+    order: 1;
+  }
+  .leaving .panel {
+    transform: translateY(12px) !important;
+  }
+  #toast {
+    bottom: auto;
+    top: 20px;
+    left: calc(50% + var(--rail) / 2);
+  }
+  /* The conversation is a workspace beside the inbox, not a modal sheet. */
+  body[data-tab="chat"][data-signed-in="true"] #chat {
+    position: fixed;
+    inset: 0 auto 0 var(--rail);
+    width: var(--inbox);
+    padding: 28px 20px;
+    border-right: 1px solid var(--line);
+    overflow-y: auto;
+    background: var(--surface);
+    min-height: 0;
+  }
+  #chat .toolbar {
+    gap: 4px;
+    margin-bottom: 22px;
+  }
+  #chat .toolbar h1 {
+    font-size: 1.7rem;
+  }
+  #chat .inbox-row {
+    padding: 18px 10px;
+    border-radius: 12px;
+    gap: 10px;
+  }
+  #chat .inbox-row:hover,
+  #chat .inbox-row[aria-current="true"] {
+    background: var(--bubble);
+  }
+  #chat .inbox-title strong {
+    font-size: 0.98rem;
+  }
+  .chat-idle {
+    position: fixed;
+    inset: 32px 32px 32px calc(var(--rail) + var(--inbox) + 32px);
+    display: grid;
+    place-items: center;
+    color: var(--line);
+    pointer-events: none;
+  }
+  .chat-idle svg {
+    width: 100px;
+    height: 100px;
+    stroke-width: 1;
+  }
+  .conversation-layer {
+    inset: 24px 24px 24px calc(var(--rail) + var(--inbox) + 24px);
+    padding: 0;
+    background: transparent;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    pointer-events: none;
+    animation: none;
+  }
+  .conversation-layer .panel.conversation {
+    width: 100%;
+    height: 100%;
+    max-height: none;
+    min-height: 0;
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    pointer-events: auto;
+    box-shadow: 0 8px 40px #23131808;
+    animation: none;
+  }
+  .conversation .panel-header {
+    min-height: 76px;
+    padding: 12px 20px;
+  }
+  .conversation .messages {
+    padding: 24px 28px;
+  }
+  .conversation .bubble {
+    max-width: min(78%, 660px);
+  }
+  .conversation .composer {
+    padding: 18px 24px;
+  }
+  .conversation-layer.leaving {
+    transition: none;
+  }
+  .conversation-layer.leaving .panel {
+    transform: none !important;
+  }
+  @keyframes desktop-dialog {
+    from {
+      opacity: 0;
+      transform: translateY(12px) scale(0.985);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+}
+@media (min-width: 1600px) {
+  :root {
+    --rail: 240px;
+    --inbox: 370px;
+  }
+}
+@media (min-width: 960px) and (max-width: 1150px) {
+  :root {
+    --rail: 188px;
+    --inbox: 300px;
+  }
+  #tabs {
+    padding-inline: 12px;
+  }
+  #tabs button {
+    gap: 10px;
+    padding-inline: 12px;
+  }
+  .recent-strip {
+    gap: 14px;
+  }
+  .recent-card .event-copy {
+    padding: 16px;
+  }
+  .event-card {
+    display: block;
+  }
+  .event-card img {
+    width: 100%;
+    aspect-ratio: 16/9;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .panel {
+    animation: none !important;
+  }
+}

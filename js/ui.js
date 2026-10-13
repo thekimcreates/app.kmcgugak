@@ -69,13 +69,30 @@ export function toast(message) {
   toastTimer = setTimeout(() => node.classList.remove("shown"), 4500);
 }
 const layers = [];
+const desktopQuery = matchMedia("(min-width: 960px)");
+function syncLayers() {
+  for (const layer of layers) {
+    const workspace = layer.workspace && desktopQuery.matches;
+    layer.panel.setAttribute("role", workspace ? "region" : "dialog");
+    if (workspace) layer.panel.removeAttribute("aria-modal");
+    else layer.panel.setAttribute("aria-modal", "true");
+  }
+  document.body.classList.toggle(
+    "locked",
+    layers.some((layer) => !(layer.workspace && desktopQuery.matches)),
+  );
+}
+desktopQuery.addEventListener("change", syncLayers);
 export function closeTop() {
   layers.at(-1)?.close();
 }
 export function closeAll() {
   for (const layer of [...layers].reverse()) layer.close(true);
 }
-export function sheet(title, { full = false, onClose } = {}) {
+export function sheet(
+  title,
+  { full = false, workspace = false, onClose } = {},
+) {
   const previous = document.activeElement;
   const overlay = el("div", { class: "overlay" }),
     panel = el("section", {
@@ -88,6 +105,7 @@ export function sheet(title, { full = false, onClose } = {}) {
     body = el("div", { class: "panel-body" });
   const layer = {
     overlay,
+    workspace,
     panel,
     header,
     body,
@@ -97,12 +115,16 @@ export function sheet(title, { full = false, onClose } = {}) {
       onClose?.();
       overlay.classList.add("leaving");
       setTimeout(() => overlay.remove(), immediate ? 0 : 220);
-      document.body.classList.toggle("locked", layers.length > 0);
+      syncLayers();
       if (previous?.isConnected) previous.focus();
     },
   };
   header.append(
-    iconButton(full ? "back" : "close", "Close " + title, () => layer.close()),
+    iconButton(
+      full && !(workspace && desktopQuery.matches) ? "back" : "close",
+      "Close " + title,
+      () => layer.close(),
+    ),
     el("h2", { text: title }),
   );
   if (!full)
@@ -117,7 +139,7 @@ export function sheet(title, { full = false, onClose } = {}) {
       e.preventDefault();
       layer.close();
     }
-    if (e.key === "Tab") {
+    if (e.key === "Tab" && !(workspace && desktopQuery.matches)) {
       const focusable = [
         ...panel.querySelectorAll("button,input,textarea,select,a[href]"),
       ].filter((n) => !n.disabled && n.offsetParent !== null);
@@ -135,7 +157,7 @@ export function sheet(title, { full = false, onClose } = {}) {
   });
   layers.push(layer);
   document.querySelector("#layers").append(overlay);
-  document.body.classList.add("locked");
+  syncLayers();
   setTimeout(() => header.querySelector("button").focus(), 50);
   if (!full) dragToClose(panel, header, body, () => layer.close());
   return layer;

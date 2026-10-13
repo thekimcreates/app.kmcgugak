@@ -253,6 +253,12 @@ function home() {
     recentStrip(recents()),
   );
   page.replaceChildren(...content);
+  const cards = [...page.querySelectorAll(":scope > .event-card")];
+  if (cards.length) {
+    const group = el("div", { class: "next-up-grid" });
+    cards[0].before(group);
+    group.append(...cards);
+  }
 }
 function profile() {
   const page = document.querySelector("#profile");
@@ -284,38 +290,38 @@ function profile() {
   );
 }
 function drawTabs() {
-  document
-    .querySelector("#tabs")
-    .replaceChildren(
-      ...["home", "performances", "chat", "profile"].map((name) =>
-        el(
-          "button",
-          {
-            type: "button",
-            "aria-current": state.tab === name ? "page" : null,
-            "aria-label":
+  document.querySelector("#tabs").replaceChildren(
+    ...["home", "performances", "chat", "profile"].map((name) =>
+      el(
+        "button",
+        {
+          type: "button",
+          "aria-current": state.tab === name ? "page" : null,
+          "aria-label":
+            name === "performances"
+              ? "Performances"
+              : name[0].toUpperCase() + name.slice(1),
+          onClick: () => select(name),
+        },
+        [
+          el("span", { html: icon(name) }),
+          el("span", {
+            text:
               name === "performances"
                 ? "Performances"
                 : name[0].toUpperCase() + name.slice(1),
-            onClick: () => select(name),
-          },
-          [
-            el("span", { html: icon(name) }),
-            el("span", {
-              text:
-                name === "performances"
-                  ? "Performances"
-                  : name[0].toUpperCase() + name.slice(1),
-            }),
-          ],
-        ),
+          }),
+        ],
       ),
-    );
+    ),
+  );
 }
 function select(name, { fromHash = false } = {}) {
   if (!["home", "performances", "chat", "profile"].includes(name)) return;
   const repeated = state.tab === name;
+  if (state.tab === "chat" && name !== "chat") chat.closeRooms();
   state.tab = name;
+  document.body.dataset.tab = name;
   document
     .querySelectorAll(".page")
     .forEach((page) => (page.hidden = page.id !== name));
@@ -368,22 +374,33 @@ window.addEventListener("message", (event) => {
   )
     return;
   frameReady = true;
-  const safeTop = Math.max(
-    0,
-    parseFloat(getComputedStyle(document.querySelector("#home")).paddingTop) -
-      24,
-  );
-  frame.contentWindow.KMCMobile?.setTopInset(safeTop);
-  frame.contentWindow.KMCMobile?.setBottomInset(
-    window.innerHeight -
-      document.querySelector("#tabs").getBoundingClientRect().top +
-      16,
-  );
+  syncPerformanceInsets();
   frame.contentWindow.KMCMobile?.setTextScale(
     Number(localStorage.getItem("kmc.textScale") || 1),
   );
   flushPerformance();
 });
+function syncPerformanceInsets() {
+  if (!frameReady) return;
+  const desktop = matchMedia("(min-width: 960px)").matches;
+  const safeTop = desktop
+    ? 0
+    : Math.max(
+        0,
+        parseFloat(
+          getComputedStyle(document.querySelector("#home")).paddingTop,
+        ) - 24,
+      );
+  frame.contentWindow.KMCMobile?.setTopInset(safeTop);
+  frame.contentWindow.KMCMobile?.setBottomInset(
+    desktop
+      ? 0
+      : window.innerHeight -
+          document.querySelector("#tabs").getBoundingClientRect().top +
+          16,
+  );
+}
+window.addEventListener("resize", syncPerformanceInsets);
 function applyHash() {
   const raw = location.hash.slice(1);
   if (raw.startsWith("performance/")) {
@@ -416,6 +433,7 @@ function directions(address) {
 function commitAccount(member, error) {
   const previous = state.account?.id;
   state.account = member;
+  document.body.dataset.signedIn = member ? "true" : "false";
   if (previous !== member?.id) {
     accountGeneration++;
     chat.reset();

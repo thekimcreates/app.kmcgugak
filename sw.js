@@ -1,8 +1,9 @@
-const VERSION = "kmc-web-shell-v2-window";
+const VERSION = "kmc-web-shell-v3-desktop";
 const SHELL = [
   "./",
   "./index.html",
   "./style.css",
+  "./desktop.css",
   "./manifest.webmanifest",
   "./js/app.js",
   "./js/models.js",

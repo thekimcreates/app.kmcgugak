@@ -4882,6 +4882,39 @@ html { font-size:calc(16px * var(--app-text-scale,1))!important; -webkit-text-si
 @media (min-width: 700px) {
   .performance-filter-row { max-width: 640px; margin-left: auto !important; }
 }
+</style><style id="desktop-performance-layout">
+/* Desktop performance workspace; the phone gallery remains unchanged. */
+@media (min-width: 740px) {
+  .performance-browser { padding-top: 36px !important; }
+  .performance-browser .section-container { padding-inline: clamp(28px, 3.5vw, 56px) !important; max-width: 1480px !important; margin-inline: auto; }
+  .performance-browser-header { margin-bottom: 26px !important; }
+  #performance-count { font-size: 1.8rem; letter-spacing: -.03em; }
+  .mobile-filter-toggle { padding: 12px 18px; border-radius: 12px; }
+  .performances-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 290px), 1fr)) !important; gap: 24px !important; }
+  .performance-public-card.performance-card { max-height: none !important; border-radius: 18px !important; transition: box-shadow .18s, border-color .18s !important; }
+  .performance-public-card.performance-card:hover { border-color: #8b233280 !important; box-shadow: 0 8px 28px #00000012 !important; }
+  .performance-public-card .performance-card-content { padding: 20px !important; }
+  .performance-filter-row { max-width: 600px; padding: 20px !important; border: 1px solid #8883; border-radius: 18px; background: var(--app-surface); }
+  .performance-detail, .performance-gallery-modal { align-items: center !important; padding: 32px !important; }
+  .performance-detail-shell { width: min(100%, 1020px) !important; height: 86dvh !important; max-height: 920px !important; border-radius: 22px !important; }
+  .performance-detail-hero { height: clamp(220px, 32dvh, 340px) !important; cursor: default; }
+  .performance-detail-heading { padding: 40px 40px 30px !important; }
+  .performance-detail-heading h2 { font-size: 2rem !important; }
+  .performance-detail-content { padding: 28px 40px 40px !important; }
+  .performance-detail-close { left: auto !important; right: 22px !important; top: 22px !important; }
+  .performance-detail-section { margin-bottom: 28px !important; padding-bottom: 28px !important; }
+  .performance-detail-section h3 { font-size: 1.25rem !important; }
+  .performance-location-name { font-size: 1.2rem !important; }
+  .performance-gallery-preview { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)) !important; gap: 12px !important; background: transparent !important; border: 0 !important; border-radius: 0 !important; }
+  .performance-gallery-modal-shell { width: min(100%, 1120px) !important; height: auto !important; min-height: 260px; max-height: calc(100dvh - 64px) !important; border-radius: 22px !important; padding: 0 28px 32px !important; }
+  .performance-gallery-modal-header { padding: 26px 60px 24px !important; min-height: 88px; justify-content: flex-start !important; margin-bottom: 4px !important; cursor: default; }
+  .performance-gallery-modal-header h2 { font-size: 1.5rem !important; }
+  .mobile-gallery-handle { display: none !important; }
+  .performance-gallery-modal-close { top: 24px !important; left: auto !important; right: 0 !important; }
+  .performance-gallery-grid { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)) !important; gap: 14px !important; }
+  .performance-gallery-viewer { padding: 72px 40px 90px !important; }
+  .performance-gallery-viewer-close { left: auto !important; right: 24px !important; top: 24px !important; }
+}
 </style></head>
 
 <body class="performances-page">

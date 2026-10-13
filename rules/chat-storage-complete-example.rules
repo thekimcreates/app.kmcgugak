@@ -1,0 +1,90 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isActiveAdmin() {
+      return request.auth != null
+        && firestore.get(
+          /databases/(default)/documents/admins/$(request.auth.uid)
+        ).data.active == true;
+    }
+
+    function isImage() {
+      return request.resource.contentType != null
+        && request.resource.contentType.matches('image/.*');
+    }
+
+    function isPerformanceMedia() {
+      return request.resource.contentType != null
+        && request.resource.contentType.matches('(image|video)/.*');
+    }
+
+    // Performance highlights and gallery media share this location. Gallery
+    // videos may be as large as 500 MB; only active administrators can write.
+    match /performance-highlights/{performanceId}/{fileName} {
+      allow create, update: if isActiveAdmin()
+        && isPerformanceMedia()
+        && request.resource.size <= 500 * 1024 * 1024;
+      allow delete: if isActiveAdmin();
+    }
+
+    // Existing image-management locations used by the other admin pages.
+    match /home/hero/{fileName} {
+      allow create, update: if isActiveAdmin()
+        && isImage()
+        && request.resource.size <= 25 * 1024 * 1024;
+      allow delete: if isActiveAdmin();
+    }
+
+    match /arrangement-photos/{arrangementId}/{fileName} {
+      allow create, update: if isActiveAdmin()
+        && isImage()
+        && request.resource.size <= 25 * 1024 * 1024;
+      allow delete: if isActiveAdmin();
+    }
+
+    match /instrument-photos/{instrumentId}/{fileName} {
+      allow create, update: if isActiveAdmin()
+        && isImage()
+        && request.resource.size <= 25 * 1024 * 1024;
+      allow delete: if isActiveAdmin();
+    }
+
+    match /site-information/logos/{fileName} {
+      allow create, update: if isActiveAdmin()
+        && isImage()
+        && request.resource.size <= 25 * 1024 * 1024;
+      allow delete: if isActiveAdmin();
+    }
+
+    match /team/{imageType}/{fileName} {
+      allow create, update: if isActiveAdmin()
+        && isImage()
+        && request.resource.size <= 25 * 1024 * 1024;
+      allow delete: if isActiveAdmin();
+    }
+
+// Paste INSIDE match /b/{bucket}/o in existing Firebase Storage rules.
+function kmcStorageMember() {
+  return request.auth != null && request.auth.token.get('memberId','') == request.auth.uid;
+}
+function kmcStorageChatAccess(chatId) {
+  return kmcStorageMember() && (chatId == 'team' || request.auth.uid in firestore.get(/databases/(default)/documents/chats/$(chatId)).data.participants);
+}
+match /chatAttachments/{chatId}/{senderId}/{messageId}/{fileId} {
+  allow create: if kmcStorageChatAccess(chatId) && senderId == request.auth.uid && fileId in ['0','1','2','3'] && request.resource.size > 0 && request.resource.size <= 10485760 &&
+    request.resource.contentType is string && request.resource.contentType.size() <= 100;
+  allow read: if kmcStorageChatAccess(chatId) && (senderId == request.auth.uid ||
+    (firestore.exists(/databases/(default)/documents/chats/$(chatId)/messages/$(messageId)) &&
+     firestore.get(/databases/(default)/documents/chats/$(chatId)/messages/$(messageId)).data.deleted == false));
+  allow update: if false;
+  allow delete: if kmcStorageChatAccess(chatId) && (senderId == request.auth.uid || request.auth.token.get('chatAdmin',false) == true || request.auth.token.get('admin',false) == true);
+}
+
+    // Website media is publicly viewable, but unmatched paths are never writable.
+    match /{topLevel}/{rest=**} {
+      allow read: if topLevel != 'chatAttachments';
+      allow write: if false;
+    }
+  }
+}

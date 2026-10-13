@@ -1,0 +1,14 @@
+// Add this match block inside your existing match /databases/{database}/documents.
+// Keep all of your existing website/admin rules.
+match /memberProfiles/{memberId} {
+  function ownMemberProfile() {
+    return request.auth != null
+      && request.auth.uid == memberId
+      && request.auth.token.memberId == memberId;
+  }
+  allow get: if ownMemberProfile();
+  allow create, update: if ownMemberProfile()
+    && request.resource.data.keys().hasOnly(['photoBase64'])
+    && request.resource.data.photoBase64 is string
+    && request.resource.data.photoBase64.size() <= 150000;
+}

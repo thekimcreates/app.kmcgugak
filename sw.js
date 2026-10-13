@@ -1,4 +1,4 @@
-const VERSION = "kmc-web-shell-v1";
+const VERSION = "kmc-web-shell-v2-window";
 const SHELL = [
   "./",
   "./index.html",

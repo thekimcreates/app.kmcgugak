@@ -63,7 +63,7 @@ a {
   display: none !important;
 }
 #app {
-  max-width: 760px;
+  max-width: none;
   min-height: 100dvh;
   margin: auto;
   position: relative;
@@ -76,7 +76,7 @@ a {
 #performances {
   position: fixed;
   inset: 0;
-  max-width: 760px;
+  max-width: none;
   margin: auto;
   padding: 0;
 }
@@ -383,7 +383,7 @@ p {
   animation: fade 0.18s;
 }
 .panel {
-  width: min(100%, 760px);
+  width: 100%;
   height: 90dvh;
   border-radius: 28px 28px 0 0;
   background: var(--bg);

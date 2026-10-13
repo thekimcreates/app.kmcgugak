@@ -4845,6 +4845,43 @@ html { font-size:calc(16px * var(--app-text-scale,1))!important; -webkit-text-si
 .performance-gallery-preview-tile img.kmc-soft-preview,
 .performance-gallery-filmstrip-item img.kmc-soft-preview { filter:none!important; transform:none!important; opacity:1!important; }
 .performance-gallery-modal-shell { -webkit-backdrop-filter:none!important; backdrop-filter:none!important; }
+</style><style id="web-window-layout">
+/* Browser-window layout. These overrides belong only to the web port. */
+.performance-public-card.performance-card { max-height: none !important; }
+.performance-browser .section-container {
+  width: 100% !important;
+  max-width: none !important;
+  box-sizing: border-box;
+  padding-inline: clamp(20px, 3vw, 48px) !important;
+}
+.performances-grid {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)) !important;
+  gap: 24px !important;
+  align-items: stretch;
+}
+.performance-public-card .performance-card-content {
+  padding: 18px 20px 20px !important;
+  gap: 8px !important;
+}
+.performance-public-card .performance-location {
+  font-size: 1.4rem !important;
+  font-weight: 700 !important;
+  line-height: 1.35 !important;
+  overflow-wrap: anywhere;
+}
+.performance-public-card .performance-date-time {
+  font-size: 1rem !important;
+  line-height: 1.5 !important;
+  opacity: .85 !important;
+}
+.performance-public-card .performance-meta {
+  font-size: 1rem !important;
+  line-height: 1.5 !important;
+  opacity: .8 !important;
+}
+@media (min-width: 700px) {
+  .performance-filter-row { max-width: 640px; margin-left: auto !important; }
+}
 </style></head>
 
 <body class="performances-page">

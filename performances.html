@@ -8589,6 +8589,7 @@ window.KMCMobile = {
         document.documentElement.style.setProperty('--app-bottom-inset', `${Math.max(0,Number(value)||0)}px`);
     },
     onTabReselected() {
+        window.dispatchEvent(new Event("kmc-refresh-performances"));
         if (!detail.hidden || !galleryModal.hidden || !galleryViewer.hidden || overlayHistory.busy()) {
             return this.closeAll();
         }
@@ -8664,11 +8665,16 @@ window.KMCMobile = {
         return;
     }
 
+    window.addEventListener("kmc-refresh-performances", () => startBackgroundLoad());
+    let refreshRunning = false;
     const startBackgroundLoad = () => {
+        if (refreshRunning) return;
+        refreshRunning = true;
         const performancesRequest = window.KMCPerformanceList.list();
         const arrangementRequest = dataStore.getArrangements();
         const teamRequest = dataStore.getTeam();
 
+        performancesRequest.finally(() => { refreshRunning = false; }).catch(() => {});
         performancesRequest
             .then((freshRecords) => {
                 const publicRecords = freshRecords.filter(isPublicPerformance);
@@ -8815,7 +8821,11 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 </script>
 <script>
-window.addEventListener('load',()=>{window.KMCMobile?.setBottomInset(110);window.KMCMobile?.setTopInset(0);parent.postMessage({type:'kmc-performance-ready'},location.origin);});
+window.addEventListener('load',()=>{window.KMCMobile?.setBottomInset(110);window.KMCMobile?.setTopInset(0);parent.postMessage({type:'kmc-performance-ready'},location.origin);
+const syncRoute=()=>parent.postMessage({type:'kmc-performance-route',id:location.hash.slice(1)},location.origin);
+window.addEventListener('hashchange',syncRoute);
+const originalPush=history.pushState.bind(history), originalReplace=history.replaceState.bind(history);
+history.pushState=(...args)=>{originalPush(...args);syncRoute();};history.replaceState=(...args)=>{originalReplace(...args);syncRoute();};});
 document.addEventListener('click',event=>{const a=event.target.closest('a[href]');if(!a)return;const url=new URL(a.href);if(url.hash && /\/performances\/?$/.test(url.pathname)){event.preventDefault();window.KMCMobile?.openRequest(url.hash.slice(1),'');}else if(['https:','http:','mailto:','tel:'].includes(url.protocol)){event.preventDefault();window.open(url.href,'_blank','noopener');}});
 </script></body>
 </html>

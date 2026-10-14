@@ -1,7 +1,9 @@
-const VERSION = "kmc-web-shell-v3-desktop";
+const VERSION = "kmc-web-shell-v4-native-routes";
 const SHELL = [
   "./",
   "./index.html",
+  "./performances/",
+  "./performances.html",
   "./style.css",
   "./desktop.css",
   "./manifest.webmanifest",
@@ -47,11 +49,11 @@ self.addEventListener("fetch", (event) => {
   const known = SHELL.some((path) => path.replace(/^\.\//, "") === relative);
   if (
     event.request.mode === "navigate" &&
-    (relative === "" || relative === "index.html")
+    (relative === "" || relative === "index.html" || relative === "performances/" || relative === "performances")
   ) {
     event.respondWith(
       fetch(event.request).catch(() =>
-        caches.match(new URL("index.html", base).href),
+        caches.match(new URL(relative.startsWith("performances") ? "performances/" : "index.html", base).href),
       ),
     );
   } else if (known) {

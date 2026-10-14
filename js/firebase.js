@@ -106,7 +106,9 @@ export async function liveGateway() {
     watchPublic(callback, error) {
       let records = [],
         members = [];
+      try { const saved = JSON.parse(localStorage.getItem("kmc.public.feed.v1") || "null"); if (saved) { records = saved.records || []; members = saved.members || []; callback({ records, members }); } } catch {}
       const emit = () => callback({ records, members });
+      const save = () => { try { localStorage.setItem("kmc.public.feed.v1", JSON.stringify({ records: records.map(({galleryItems, ...p}) => p), members })); } catch {} };
       const stops = [
         f.onSnapshot(
           f.collection(db, "performances"),
@@ -116,6 +118,7 @@ export async function liveGateway() {
               .filter(
                 (p) => !p.hidden && /^\d{4}-\d{2}-\d{2}$/.test(p.date || ""),
               );
+            if (!snap.metadata.isFromCache) save();
             emit();
           },
           error,
@@ -126,6 +129,7 @@ export async function liveGateway() {
             members = (snap.data()?.members || []).filter(
               (m) => validId(m.id) && m.name,
             );
+            if (!snap.metadata.isFromCache) save();
             emit();
           },
           error,

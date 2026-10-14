@@ -326,7 +326,7 @@ function select(name, { fromHash = false } = {}) {
     .querySelectorAll(".page")
     .forEach((page) => (page.hidden = page.id !== name));
   if (!fromHash && location.hash !== "#" + name)
-    history.pushState(null, "", "#" + name);
+    history.pushState(null, "", (name === "performances" ? "/performances/" : "/#" + name));
   drawTabs();
   if (name === "home") {
     home();
@@ -362,11 +362,16 @@ function openPerformance(
     history.pushState(
       null,
       "",
-      id ? "#performance/" + encodeURIComponent(id) : "#performances",
+      id ? "/performances/#" + encodeURIComponent(id) : "/performances/",
     );
   flushPerformance();
 }
 window.addEventListener("message", (event) => {
+  if (event.origin === location.origin && event.source === frame.contentWindow && event.data?.type === "kmc-performance-route") {
+    const id = event.data.id || "";
+    if (state.tab === "performances" && (!id || /^[\w-]{1,150}$/.test(id))) history.replaceState(null, "", "/performances/" + (id ? "#" + encodeURIComponent(id) : ""));
+    return;
+  }
   if (
     event.origin !== location.origin ||
     event.source !== frame.contentWindow ||
@@ -403,6 +408,11 @@ function syncPerformanceInsets() {
 window.addEventListener("resize", syncPerformanceInsets);
 function applyHash() {
   const raw = location.hash.slice(1);
+  if (/\/performances\/?$/.test(location.pathname)) {
+    let id; try { id = decodeURIComponent(raw); } catch { return; }
+    if (!id || /^[\w-]{1,150}$/.test(id)) openPerformance(id, "", false, true);
+    return;
+  }
   if (raw.startsWith("performance/")) {
     let id;
     try {
@@ -756,7 +766,9 @@ const ready = (async () => {
     gateway.onAccount(commitAccount);
     publicStop = gateway.watchPublic(
       (data) => {
+        const changed = JSON.stringify(state.records) !== JSON.stringify(data.records);
         state.records = data.records;
+        if (changed && frameReady) frame.contentWindow.dispatchEvent(new Event("kmc-refresh-performances"));
         state.members = data.members;
         state.loading = false;
         state.error = "";

@@ -62,7 +62,7 @@ a:focus-visible {
     background: url("./assets/branding/kmc-gugak-full-logo.png") left center /
       contain no-repeat;
   }
-  #tabs button {
+  #tabs a {
     flex: 0 0 auto;
     display: flex;
     flex-direction: row;
@@ -72,19 +72,28 @@ a:focus-visible {
     border-radius: 13px;
     font-size: 1rem;
     min-height: 54px;
+    margin: 0;
+    line-height: 24px;
   }
-  #tabs button span:last-child {
+  #tabs a > span:last-child {
     min-width: 0;
     overflow-wrap: anywhere;
   }
-  #tabs button svg {
+  #tabs a > span:first-child {
+    display: grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    flex: 0 0 24px;
+  }
+  #tabs a svg {
     width: 23px;
     height: 23px;
   }
-  #tabs button:hover {
+  #tabs a:hover {
     background: var(--bubble);
   }
-  #tabs button[aria-current="page"] {
+  #tabs a[aria-current="page"] {
     background: #8b233212;
     color: var(--brand);
     font-weight: 700;
@@ -368,7 +377,7 @@ a:focus-visible {
   #tabs {
     padding-inline: 12px;
   }
-  #tabs button {
+  #tabs a {
     gap: 10px;
     padding-inline: 12px;
   }

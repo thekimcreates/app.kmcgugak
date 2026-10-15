@@ -335,7 +335,10 @@ p {
   box-shadow: 0 8px 40px #23131820;
   z-index: 50;
 }
-#tabs button {
+#tabs a {
+  text-decoration: none;
+  font-weight: 400;
+  cursor: pointer;
   flex: 1;
   background: transparent;
   border: 0;
@@ -349,7 +352,7 @@ p {
   font-size: 0.7rem;
   min-height: 58px;
 }
-#tabs button[aria-current="page"] {
+#tabs a[aria-current="page"] {
   background: #8b233211;
   color: var(--brand);
   font-weight: 700;
@@ -859,7 +862,7 @@ progress {
   .panel-body {
     padding-inline: 16px;
   }
-  #tabs button {
+  #tabs a {
     font-size: 0.65rem;
   }
 }
@@ -877,7 +880,7 @@ progress {
 .app-next-performance h3{margin:14px 0 16px;font-size:1.5rem;line-height:1.2;}
 .next-detail{display:flex;align-items:flex-start;gap:10px;margin:9px 0;color:var(--muted);}
 .next-detail svg{width:18px;height:18px;flex:none;display:block;}
-@media(min-width:960px){#settings{padding:40px;max-width:900px;}#settings>h2{margin-top:32px;}#tabs button:last-child{margin-top:8px;}}
+@media(min-width:960px){#settings{padding:40px;max-width:900px;}#settings>h2{margin-top:32px;}}
 @media(max-width:959px){.conversation{touch-action:pan-y;}}
 
 @font-face{font-family:KmcCupertino;src:url('./assets/CupertinoIcons.ttf') format('truetype');font-display:block;}

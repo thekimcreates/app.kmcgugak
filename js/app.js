@@ -1,3 +1,4 @@
+import { tabPath, readRoute, routeURL } from "./routes.js";
 import {
   el,
   button,
@@ -252,7 +253,7 @@ function profile() {
   const page = document.querySelector("#profile");
   const toolbar = el("div", { class: "toolbar" }, [
     el("h1", { text: "Profile" }),
-    matchMedia("(min-width:960px)").matches ? null : iconButton("gear", "Settings", settings),
+    matchMedia("(min-width:960px)").matches ? null : iconButton("gear", "Settings", () => select("settings")),
   ]);
   if (!account()) {
     page.replaceChildren(
@@ -281,15 +282,19 @@ function drawTabs() {
   document.querySelector("#tabs").replaceChildren(
     ...["home", "performances", "chat", "profile", ...(matchMedia("(min-width:960px)").matches?["settings"]:[])].map((name) =>
       el(
-        "button",
+        "a",
         {
-          type: "button",
+          href: tabPath(name),
           "aria-current": state.tab === name ? "page" : null,
           "aria-label":
             name === "performances"
               ? "Performances"
               : name[0].toUpperCase() + name.slice(1),
-          onClick: () => select(name),
+          onClick: (event) => {
+            if (event.button > 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+            event.preventDefault();
+            select(name);
+          },
         },
         [
           el("span", { html: icon(name) }),
@@ -313,8 +318,9 @@ function select(name, { fromHash = false } = {}) {
   document
     .querySelectorAll(".page")
     .forEach((page) => (page.hidden = page.id !== name));
-  if (!fromHash && location.hash !== "#" + name)
-    history.pushState(null, "", (name === "performances" ? "/performances/" : "/#" + name));
+  const target = routeURL(name, location.search);
+  if (!fromHash && location.pathname + location.search + location.hash !== target)
+    history.pushState(null, "", target);
   drawTabs();
   if (name === "home") {
     home();
@@ -351,14 +357,14 @@ function openPerformance(
     history.pushState(
       null,
       "",
-      id ? "/performances/#" + encodeURIComponent(id) : "/performances/",
+      routeURL("performances", location.search, id),
     );
   flushPerformance();
 }
 window.addEventListener("message", (event) => {
   if (event.origin === location.origin && event.source === frame.contentWindow && event.data?.type === "kmc-performance-route") {
     const id = event.data.id || "";
-    if (state.tab === "performances" && (!id || /^[\w-]{1,150}$/.test(id))) history.replaceState(null, "", "/performances/" + (id ? "#" + encodeURIComponent(id) : ""));
+    if (state.tab === "performances" && (!id || /^[\w-]{1,150}$/.test(id))) history.replaceState(null, "", routeURL("performances", location.search, id));
     return;
   }
   if (
@@ -395,27 +401,17 @@ function syncPerformanceInsets() {
   );
 }
 window.addEventListener("resize", () => {syncPerformanceInsets();drawTabs();profile();});
-function applyHash() {
-  const raw = location.hash.slice(1);
-  if (/\/performances\/?$/.test(location.pathname)) {
-    let id; try { id = decodeURIComponent(raw); } catch { return; }
-    if (!id || /^[\w-]{1,150}$/.test(id)) openPerformance(id, "", false, true);
-    return;
-  }
-  if (raw.startsWith("performance/")) {
-    let id;
-    try {
-      id = decodeURIComponent(raw.slice(12));
-    } catch {
-      return;
-    }
-    if (/^[\w-]{1,150}$/.test(id)) openPerformance(id, "", false, true);
-    return;
-  }
-  select(raw || "home", { fromHash: true });
+function applyRoute() {
+  const route = readRoute(location);
+  if (!route) return;
+  const target = routeURL(route.tab, location.search, route.id);
+  if (location.pathname + location.search + location.hash !== target)
+    history.replaceState(null, "", target);
+  if (route.tab === "performances") openPerformance(route.id, "", false, true);
+  else select(route.tab, { fromHash: true });
 }
-window.addEventListener("hashchange", applyHash);
-window.addEventListener("popstate", applyHash);
+window.addEventListener("hashchange", applyRoute);
+window.addEventListener("popstate", applyRoute);
 function directions(address) {
   const ios =
     /iPhone|iPad|iPod/.test(navigator.userAgent) ||
@@ -788,7 +784,7 @@ document.querySelector("#status").textContent = demo
   : "";
 home();
 profile();
-applyHash();
+applyRoute();
 clock = setInterval(() => {
   if (state.tab === "home" && !document.hidden) home();
 }, 60000);

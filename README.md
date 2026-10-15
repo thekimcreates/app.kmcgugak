@@ -102,7 +102,7 @@ You can use `app.kmcgugak.org` without moving the existing website. Configure th
 
 ## Deep links and updates
 
-Use `https://YOUR-SITE/PATH/#performance/PERFORMANCE-ID` to open a specific performance. Existing `https://kmcgugak.org/performances/#ID` links encountered inside the performance interface open its in-app detail view. Opening an old website link from another app/browser still goes to the existing website unless that website redirects users to this new portal; a static web app cannot claim native universal links automatically.
+Use `https://app.kmcgugak.org/performances#PERFORMANCE-ID` to open a specific performance. Tabs use `/`, `/performances`, `/chat`, `/profile`, and `/settings`; each has a static entry page for refreshes and shared links. Older `#chat`, `#profile`, and `#performance/ID` links are upgraded automatically. Existing `https://kmcgugak.org/performances/#ID` links encountered inside the performance interface open its in-app detail view. Opening an old website link from another app/browser still goes to the existing website unless that website redirects users to this new portal; a static web app cannot claim native universal links automatically.
 
 Upload updated files to the same repository. The public shell cache uses network refresh; after substantial shell changes, increment the cache version in `sw.js`. No private Firebase responses or chat attachments are cached by that service worker. Browser Firebase Auth persists login until sign out; use a private window on a shared device.
 

@@ -1,14 +1,18 @@
-const VERSION = "kmc-web-shell-v5-chat-polish";
+const VERSION = "kmc-web-shell-v6-clean-paths";
 const SHELL = [
   "./",
   "./index.html",
   "./performances/",
+  "./chat/",
+  "./profile/",
+  "./settings/",
   "./performances.html",
   "./style.css",
   "./desktop.css",
   "./manifest.webmanifest",
   "./js/app.js",
   "./js/models.js",
+  "./js/routes.js",
   "./js/ui.js",
   "./js/chat.js",
   "./js/config.js",
@@ -50,11 +54,11 @@ self.addEventListener("fetch", (event) => {
   const known = SHELL.some((path) => path.replace(/^\.\//, "") === relative);
   if (
     event.request.mode === "navigate" &&
-    (relative === "" || relative === "index.html" || relative === "performances/" || relative === "performances")
+    /^(?:index\.html|(?:performances|chat|profile|settings)\/?(?:index\.html)?)?$/.test(relative)
   ) {
     event.respondWith(
       fetch(event.request).catch(() =>
-        caches.match(new URL(relative.startsWith("performances") ? "performances/" : "index.html", base).href),
+        caches.match(new URL("index.html", base).href),
       ),
     );
   } else if (known) {
@@ -82,7 +86,7 @@ self.addEventListener("notificationclick", (event) => {
       .matchAll({ type: "window", includeUncontrolled: true })
       .then((windows) => {
         if (windows[0]) return windows[0].focus();
-        return self.clients.openWindow(new URL("./#chat", self.location).href);
+        return self.clients.openWindow(new URL("./chat", self.location).href);
       }),
   );
 });

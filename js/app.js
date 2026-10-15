@@ -29,12 +29,16 @@ import {
   notificationTest,
 } from "./chat.js";
 const demo = new URLSearchParams(location.search).get("demo") === "1";
+let savedHome = null;
+try { savedHome = JSON.parse(localStorage.getItem("kmc.home.snapshot.v1") || "null"); } catch {}
+if (demo) savedHome = null;
+let cachedMember = savedHome?.member || null;
 const state = {
   account: null,
-  records: [],
-  members: [],
+  records: savedHome?.records || [],
+  members: savedHome?.members || [],
   tab: "home",
-  loading: true,
+  loading: !savedHome,
   error: "",
   gateway: null,
 };
@@ -64,8 +68,9 @@ function guest(description) {
   ]);
 }
 function assigned() {
-  return account()
-    ? state.records.filter((p) => (p.memberIds || []).includes(account().id))
+  const member = account() || cachedMember;
+  return member
+    ? state.records.filter((p) => (p.memberIds || []).includes(member.id))
     : state.records;
 }
 function recents() {
@@ -121,9 +126,9 @@ function recentStrip(records, { profile = false } = {}) {
 function home() {
   const page = document.querySelector("#home"),
     now = new Date(),
-    member = account();
+    member = account() || cachedMember;
   const display = member?.name || "there",
-    parent = member && localStorage.getItem(key("parent")) === "true";
+    parent = member && localStorage.getItem(`kmc.parent.${member.id}`) === "true";
   const greeting = `Good ${now.getHours() < 12 ? "morning" : now.getHours() < 17 ? "afternoon" : "evening"}, ${display}${parent ? "’s parent" : ""}!`;
   const logo = el("img", {
       class: "logo",
@@ -425,9 +430,19 @@ function directions(address) {
     "noopener",
   );
 }
+function saveHome() {
+  if(demo)return;
+  try {
+    if(!cachedMember && !state.account){localStorage.removeItem("kmc.home.snapshot.v1");return;}
+    const member=state.account||cachedMember;
+    localStorage.setItem("kmc.home.snapshot.v1",JSON.stringify({member:{id:member.id,name:member.name,photoBase64:member.photoBase64},records:state.records.map(({galleryItems,...p})=>p),members:state.members}));
+  }catch{}
+}
 function commitAccount(member, error) {
   const previous = state.account?.id;
   state.account = member;
+  if(!error)cachedMember = member;
+  saveHome();
   document.body.dataset.signedIn = member ? "true" : "false";
   if (previous !== member?.id) {
     accountGeneration++;
@@ -444,6 +459,7 @@ function commitAccount(member, error) {
   }
   home();
   profile();
+  if (state.tab === "settings") settings(true);
   if (state.tab === "chat") chat.render(document.querySelector("#chat"));
   if (error) toast(failure(error));
 }
@@ -512,70 +528,34 @@ function settings(asPage=false) {
   const host=document.querySelector("#settings");
   const layer=asPage?{body:host,close:()=>select("profile")}:sheet("Settings");
   if(asPage)host.replaceChildren(el("h1",{text:"Settings"}));
-  layer.body.append(el("h2", { text: "Account" }));
-  if (account()) {
-    layer.body.append(
-      button("Change display name", rename, "settings-row"),
-      button("Change profile picture", photo, "settings-row"),
-      button("Change password", changePassword, "settings-row"),
-    );
-    const parent = el("input", {
-      type: "checkbox",
-      checked: localStorage.getItem(key("parent")) === "true",
-    });
-    parent.onchange = () => {
-      localStorage.setItem(key("parent"), parent.checked);
-      home();
-    };
-    layer.body.append(
-      el("label", { class: "settings-row" }, [
-        parent,
-        el("span", { text: "Use parent greeting" }),
-      ]),
-      button(
-        "Sign out",
-        async () => {
-          try {
-            await state.gateway.logout();
-            closeAll();
-            select("home");
-            toast("Signed out.");
-          } catch (e) {
-            toast(failure(e));
-          }
-        },
-        "settings-row danger",
-      ),
-    );
-  } else layer.body.append(button("Sign in", login, "settings-row"));
-  layer.body.append(
-    el("h2", { text: "Notifications" }),
-    button("Test notifications", notificationTest, "settings-row"),
-  );
-  if(account())notificationPreferences(ctx,layer.body);
-  layer.body.append(el("h2", { text: "Appearance" }));
-  const size = el("select", { "aria-label": "Text size" }, [
-    el("option", { value: "1", text: "Standard text" }),
-    el("option", { value: "1.15", text: "Larger text" }),
-    el("option", { value: "1.3", text: "Largest text" }),
-  ]);
-  size.value = localStorage.getItem("kmc.textScale") || "1";
-  size.onchange = () => {
-    localStorage.setItem("kmc.textScale", size.value);
-    document.documentElement.style.setProperty("--scale", size.value);
-    if (frameReady) frame.contentWindow.KMCMobile.setTextScale(+size.value);
+  const group=(title)=>{const box=el("div",{class:"settings-group"});layer.body.append(el("h2",{class:"settings-heading",text:title}),box);return box;};
+  const row=(symbol,title,action,subtitle="")=>button("",action,"settings-row settings-menu-row");
+  const menuRow=(symbol,title,action,subtitle="")=>{
+    const node=row(symbol,title,action);node.append(el("span",{class:"settings-symbol",html:icon(symbol)}),el("span",{class:"settings-copy"},[el("strong",{text:title}),subtitle?el("span",{text:subtitle}):null]),el("span",{class:"settings-chevron",text:"›","aria-hidden":"true"}));return node;
   };
-  layer.body.append(
-    size,
-    el("h2", { text: "About" }),
-    button("Add to Home Screen", installHelp, "settings-row"),
-    el("a", {
-      href: "./privacy.html",
-      text: "Privacy and account removal",
-      class: "settings-row",
-    }),
-    el("p", { class: "muted", text: "KMC Gugak Members · Web app" }),
-  );
+  const member=account(), accountGroup=group("Account");
+  accountGroup.append(menuRow("profile",member?"Your account":"Sign in",member?accountMenu:login,member?.name||""));
+  function accountMenu(){
+    const view=sheet("Your account");view.body.classList.add("account-settings");
+    view.body.append(el("div",{class:"account-identity"},[avatar(account(),64),el("h2",{text:account()?.name||""})]));
+    const box=el("div",{class:"settings-group"});view.body.append(box);
+    box.append(menuRow("profile","Display name",rename),menuRow("photo","Profile picture",photo),menuRow("lock","Password",changePassword));
+    const parent=el("input",{type:"checkbox",checked:localStorage.getItem(key("parent"))==="true",role:"switch","aria-label":"Use parent greeting"});
+    parent.onchange=()=>{localStorage.setItem(key("parent"),parent.checked);home();};
+    box.append(el("label",{class:"settings-row settings-menu-row"},[el("span",{class:"settings-symbol",html:icon("group")}),el("strong",{class:"settings-copy",text:"Use parent greeting"}),parent]));
+    const signout=menuRow("signout","Sign out",async()=>{try{await state.gateway.logout();closeAll();select("home");toast("Signed out.");}catch(e){toast(failure(e));}});signout.classList.add("danger");view.body.append(el("div",{class:"settings-group settings-signout"},[signout]));
+  }
+  const notifications=group("Notifications");
+  if(member){notificationPreferences(ctx,notifications);const label=notifications.querySelector('.notification-setting');label.insertBefore(el("span",{class:"settings-symbol",html:icon("chat")}),label.firstChild);}
+  notifications.append(menuRow("chat","Test notifications",notificationTest));
+  const appearance=group("Appearance"), size=el("select",{"aria-label":"Text size"},[
+    el("option",{value:"1",text:"Standard"}),el("option",{value:"1.15",text:"Larger"}),el("option",{value:"1.3",text:"Largest"})]);
+  size.value=localStorage.getItem("kmc.textScale")||"1";
+  size.onchange=()=>{localStorage.setItem("kmc.textScale",size.value);document.documentElement.style.setProperty("--scale",size.value);if(frameReady)frame.contentWindow.KMCMobile.setTextScale(+size.value);};
+  appearance.append(el("label",{class:"settings-row settings-menu-row"},[el("span",{class:"settings-symbol",html:icon("textsize")}),el("strong",{class:"settings-copy",text:"Text size"}),size]));
+  const about=group("About");about.append(menuRow("home","Add to Home Screen",installHelp));
+  const privacy=el("a",{class:"settings-row settings-menu-row",href:"/privacy.html"},[el("span",{class:"settings-symbol",html:icon("shield")}),el("strong",{class:"settings-copy",text:"Privacy and account removal"}),el("span",{class:"settings-chevron",text:"›"})]);about.append(privacy);
+  layer.body.append(el("p",{class:"settings-footer",text:"KMC Gugak Members"}));
 }
 async function saveAction(layer, action) {
   const error = el("p", { class: "error" });
@@ -601,7 +581,7 @@ function rename() {
       () =>
         saveAction(layer, async () => {
           const result = await state.gateway.rename(name.input.value);
-          state.account = result;
+          state.account = result;cachedMember=result;saveHome();
           await chat.refreshProfile(result);
           toast("Display name updated.");
         }),
@@ -689,7 +669,7 @@ function photo() {
     () =>
       saveAction(layer, async () => {
         const result = await state.gateway.photo(data);
-        state.account = result;
+        state.account = result;cachedMember=result;saveHome();
         await chat.refreshProfile(result);
         if (url) URL.revokeObjectURL(url);
         toast("Profile picture updated.");
@@ -753,6 +733,7 @@ const ready = (async () => {
         state.records = data.records;
         if (changed && frameReady) frame.contentWindow.dispatchEvent(new Event("kmc-refresh-performances"));
         state.members = data.members;
+        saveHome();
         state.loading = false;
         state.error = "";
         home();

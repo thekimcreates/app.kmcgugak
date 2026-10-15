@@ -1,6 +1,7 @@
 import { dateKey, dmId, participants } from "./models.js";
 export function demoGateway() {
   let account = null;
+  const receipts=new Map(), readWatchers=new Map();
   const callbacks = new Set(),
     inboxes = new Set(),
     listeners = new Map(),
@@ -73,6 +74,8 @@ export function demoGateway() {
     emitInbox();
   };
   return {
+    watchReaders(id,cb){const watchers=readWatchers.get(id)||new Set();watchers.add(cb);readWatchers.set(id,watchers);queueMicrotask(()=>cb(receipts.get(id)||{}));return ()=>watchers.delete(cb);},
+    async markRead(id,memberId,through){const rows={...(receipts.get(id)||{}),[memberId]:+through};receipts.set(id,rows);for(const cb of readWatchers.get(id)||[])cb(rows);},
     onAccount(cb) {
       callbacks.add(cb);
       queueMicrotask(() => cb(account));

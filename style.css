@@ -887,3 +887,23 @@ progress {
 .cupertino-icon{font-family:KmcCupertino!important;font-weight:normal!important;font-style:normal!important;font-size:24px;line-height:1;display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;}
 .avatar .cupertino-icon{font-size:calc(var(--size)*.55);width:calc(var(--size)*.55);height:calc(var(--size)*.55);}
 .next-label-row strong{font-size:.8rem;letter-spacing:1px;}
+
+/* Settings uses the same grouped rows and disclosure rhythm as the iPhone app. */
+#settings{background:var(--bg);}
+.settings-heading{font-size:.88rem;font-weight:600;color:var(--muted);margin:28px 16px 10px!important;}
+.settings-group{border-radius:16px;background:var(--surface);overflow:hidden;border:1px solid var(--line);}
+.settings-group .settings-row{margin:0;border:0;border-radius:0;background:none;padding:15px 16px;min-height:60px;box-sizing:border-box;}
+.settings-group .settings-row+.settings-row{border-top:1px solid var(--line);}
+.settings-menu-row{display:flex;align-items:center;gap:14px;width:100%;text-align:left;color:inherit;text-decoration:none;font:inherit;}
+.settings-symbol{width:30px;height:30px;display:grid;place-items:center;flex:0 0 30px;color:var(--brand);}
+.settings-symbol svg{width:23px;height:23px;}
+.settings-copy{display:flex;flex:1;min-width:0;flex-direction:column;gap:4px;}
+.settings-copy strong,.settings-menu-row>strong,.notification-setting strong{font-weight:500;}
+.settings-copy>span{font-size:.85rem;color:var(--muted);}
+.settings-chevron{font-size:1.6rem;line-height:1;color:var(--muted);opacity:.65;}
+.settings-group select{width:auto;max-width:48%;margin:0;border:0;background:transparent;padding:6px;color:var(--muted);font:inherit;}
+.settings-group .notification-setting{gap:14px;}
+.settings-group .notification-setting>strong{flex:1;}
+.settings-footer{text-align:center;color:var(--muted);font-size:.8rem;margin:28px 0;}
+.settings-signout{margin-top:28px;}.settings-signout .settings-symbol{color:inherit;}
+.account-identity{text-align:center;padding:12px 0 24px;}.account-identity .avatar{margin:auto;}

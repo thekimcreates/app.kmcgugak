@@ -25,7 +25,9 @@ export async function liveGateway() {
       photo =
         (await f.getDoc(ref(`memberProfiles/${user.uid}`))).data()
           ?.photoBase64 || "";
-    } catch {}
+    } catch {
+      try {const saved=JSON.parse(localStorage.getItem("kmc.home.snapshot.v1")||"null");if(saved?.member?.id===user.uid)photo=saved.member.photoBase64||"";}catch{}
+    }
     let admin = token.claims.chatAdmin === true || token.claims.admin === true;
     try {
       if (!admin)
@@ -246,6 +248,17 @@ export async function liveGateway() {
         };
       await f.setDoc(r, thread);
       return { id: r.id, ...thread };
+    },
+    watchReaders(id, callback, error) {
+      return f.onSnapshot(f.collection(db,`chats/${id}/readers`),snap=>callback(Object.fromEntries(snap.docs.map(d=>[d.id,d.data().through?.toMillis()||0]))),error);
+    },
+    async markRead(id, memberId, through) {
+      own(memberId);const r=ref(`chats/${id}/readers/${memberId}`);
+      await f.runTransaction(db,async tx=>{
+        const prior=(await tx.get(r)).data()?.through?.toMillis()||0;
+        if(prior>=+through)return;
+        tx.set(r,{through:f.Timestamp.fromDate(new Date(through)),updatedAt:f.serverTimestamp()});
+      });
     },
     watchMessages(id, limit, callback, error) {
       return f.onSnapshot(

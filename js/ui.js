@@ -1,4 +1,9 @@
 export const icons = {
+  lock:'<rect x="5" y="10" width="14" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>',
+  signout:'<path d="M9 3H4v18h5M9 12h12m-5-5 5 5-5 5"/>',
+  textsize:'<path d="M3 5h14M10 5v16M6 21h8M17 11h6M20 11v10"/>',
+  shield:'<path d="m12 2 9 4v6c0 5-9 10-9 10S3 17 3 12V6z"/><path d="m8 12 3 3 5-6"/>',
+
   home: '<path d="m3 10 9-7 9 7v10H7V12h10v8"/>',
   performances:
     '<path d="M9 18V5l11-2v13M9 8l11-2"/><ellipse cx="5.5" cy="18" rx="3.5" ry="3"/><ellipse cx="16.5" cy="16" rx="3.5" ry="3"/>',

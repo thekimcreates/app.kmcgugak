@@ -1,3 +1,4 @@
+import { unseenCount } from "./receipts.js";
 import {
   el,
   button,
@@ -183,27 +184,14 @@ export function createChat(ctx) {
   function draw() {
     if (!container || !ctx.account()) return;
     const account = ctx.account(),
-      search = el("input", {
-        class: "search",
-        type: "search",
-        placeholder: "Search conversations",
-        "aria-label": "Search conversations",
-      }),
       list = el("div");
     const toolbar = el("div", { class: "toolbar" }, [
       el("h1", { text: "Chat" }),
       iconButton("compose", "New message", compose),
     ]);
     function rows() {
-      const query = search.value.toLowerCase();
       list.replaceChildren();
-      for (const thread of threads.filter(
-        (t) =>
-          threadTitle(t, account.id, members()).toLowerCase().includes(query) ||
-          String(t.lastMessage || "")
-            .toLowerCase()
-            .includes(query),
-      )) {
+      for (const thread of threads.filter(t=>t.id==="team" || t.lastMessageId)) {
         const peer = members().find(
           (m) =>
             m.id ===
@@ -245,7 +233,7 @@ export function createChat(ctx) {
                 title,
                 el("div", {
                   class: "meta",
-                  text: thread.lastMessage || "Say hello",
+                  text: thread.lastMessage === "Message removed" ? "" : thread.lastMessage || "Say hello",
                 }),
               ]),
             ],
@@ -256,12 +244,11 @@ export function createChat(ctx) {
         list.append(
           el("p", {
             class: "empty",
-            text: "No conversations match your search.",
+            text: "No conversations yet.",
           }),
         );
     }
-    search.oninput = rows;
-    container.replaceChildren(toolbar, search, list);
+    container.replaceChildren(toolbar, list);
     container.append(
       el("div", {
         class: "chat-idle",
@@ -349,10 +336,9 @@ export function createChat(ctx) {
         };
         list.append(
           el(
-            "button",
+            "div",
             {
               class: "member-row",
-              type: "button",
               "aria-pressed": selected.has(person.id),
               "data-member": person.id,
               onClick: toggle,
@@ -396,6 +382,7 @@ export function createChat(ctx) {
       id = null,
       searchTerm = "",
       draftTimer = null;
+    let readers = {}, stopReaders = null, readTimer = null, lastSharedRead = 0;
     const media = new Map();
     const valid = () => ctx.account()?.id === member.id && rooms.has(layer);
     const key = `kmc.draft.${member.id}.${thread.id}`;
@@ -403,7 +390,7 @@ export function createChat(ctx) {
       full: true,
       workspace: true,
       onClose: () => {
-        stop?.();
+        stop?.();stopReaders?.();clearInterval(readTimer);
         mobileQuery.removeEventListener("change",syncClose);
         clearTimeout(draftTimer);
         local.set(key, input.value);
@@ -492,14 +479,23 @@ export function createChat(ctx) {
           if (!valid()) return;
           data = messages;
           renderMessages();
-          const latest = messages[0]?.sentAt;
-          if (latest) local.set(`kmc.read.${member.id}.${thread.id}`, +latest);
+          markVisible();
         },
         (e) => {
           if (valid()) error.textContent = failure(e);
         },
       );
     }
+    function markVisible(){
+      const latest=data.find(m=>!m.deleted)?.sentAt;
+      const overlays=[...document.querySelector("#layers").children].filter(n=>!n.classList.contains("leaving"));
+      if(!latest || !valid() || document.hidden || overlays.at(-1)!==layer.overlay || +latest<=lastSharedRead)return;
+      lastSharedRead=+latest;
+      local.set(`kmc.read.${member.id}.${thread.id}`,+latest);
+      ctx.gateway.markRead?.(thread.id,member.id,latest)?.catch(()=>{lastSharedRead=0;});
+    }
+    readTimer=setInterval(markVisible,1000);
+    stopReaders=ctx.gateway.watchReaders?.(thread.id,value=>{readers=value;if(valid())renderMessages();},()=>{});
     listen();
     async function blobFor(attachment) {
       let cached = media.get(attachment.path);
@@ -534,14 +530,14 @@ export function createChat(ctx) {
             "text-button",
           ),
         );
-      let day = "";
+      let previousDate = null;
       for (const message of [...data]
         .reverse()
         .filter(
           (m) =>
-            !searchTerm ||
+            !m.deleted && (!searchTerm ||
             String(m.text).toLowerCase().includes(searchTerm) ||
-            m.senderName.toLowerCase().includes(searchTerm),
+            m.senderName.toLowerCase().includes(searchTerm)),
         )) {
         const own = message.senderId === member.id,
           date = message.sentAt ? new Date(message.sentAt) : new Date(),
@@ -549,11 +545,10 @@ export function createChat(ctx) {
             weekday: "short",
             month: "short",
             day: "numeric",
-          });
-        if (day !== dateText) {
-          day = dateText;
-          list.append(el("div", { class: "day-label", text: day }));
-        }
+          }) + " " + date.toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"});
+        if (!previousDate || date - previousDate >= 15 * 60000)
+          list.append(el("div", { class: "day-label", text: dateText }));
+        previousDate=date;
         const node = el("article", { class: own ? "message own" : "message" }),
           bubble = el("div", {
             class: "bubble",
@@ -670,14 +665,10 @@ export function createChat(ctx) {
         node.append(
           reactions,
           el("div", { class: "message-time" }, [
-            el("span", {
-              text: message.pending
-                ? "Sending…"
-                : date.toLocaleTimeString(undefined, {
-                    hour: "numeric",
-                    minute: "2-digit",
-                  }),
-            }),
+            unseenCount(message,thread,members(),readers)>0 ? el("span", {
+              text: unseenCount(message, thread, members(), readers) || "",
+              "aria-label": unseenCount(message, thread, members(), readers) + " members have not seen this message",
+            }) : null,
             message.deleted
               ? null
               : iconButton("more", "Message actions", () => options(message)),
@@ -914,24 +905,10 @@ export function createChat(ctx) {
       for (const person of selected)
         details.body.append(
           el(
-            "button",
+            "div",
             {
               class: "member-row",
-              type: "button",
-              onClick: async () => {
-                if (person.id === member.id) return;
-                try {
-                  const direct = await ctx.gateway.create(
-                    member,
-                    [person.id],
-                    "",
-                  );
-                  details.close();
-                  open(direct);
-                } catch (e) {
-                  toast(failure(e));
-                }
-              },
+
             },
             [
               avatar(person, 44),

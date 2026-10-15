@@ -1,4 +1,4 @@
-const VERSION = "kmc-web-shell-v6-clean-paths";
+const VERSION = "kmc-web-shell-v7-cache-receipts";
 const SHELL = [
   "./",
   "./index.html",
@@ -13,6 +13,7 @@ const SHELL = [
   "./js/app.js",
   "./js/models.js",
   "./js/routes.js",
+  "./js/receipts.js",
   "./js/ui.js",
   "./js/chat.js",
   "./js/config.js",

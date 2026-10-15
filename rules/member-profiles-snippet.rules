@@ -1,12 +1,15 @@
-// Add this match block inside your existing match /databases/{database}/documents.
-// Keep all of your existing website/admin rules.
+// Replace the existing memberProfiles block inside /databases/{database}/documents.
+// Do not replace your other website/chat/admin rules.
+// This collection stores avatar images only; account data stays in its own collections.
 match /memberProfiles/{memberId} {
-  function ownMemberProfile() {
+  function signedMember() {
     return request.auth != null
-      && request.auth.uid == memberId
-      && request.auth.token.memberId == memberId;
+      && request.auth.token.memberId == request.auth.uid;
   }
-  allow get: if ownMemberProfile();
+  function ownMemberProfile() {
+    return signedMember() && request.auth.uid == memberId;
+  }
+  allow get, list: if signedMember();
   allow create, update: if ownMemberProfile()
     && request.resource.data.keys().hasOnly(['photoBase64'])
     && request.resource.data.photoBase64 is string

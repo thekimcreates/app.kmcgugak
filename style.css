@@ -863,3 +863,24 @@ progress {
     font-size: 0.65rem;
   }
 }
+
+/* Chat avatars and inline notification menu */
+.avatar{flex:0 0 var(--size);min-height:var(--size);line-height:0;}
+.avatar-icon{width:100%;height:100%;display:grid;place-items:center;}
+.avatar>.avatar-icon>svg,.avatar>svg{display:block;width:55%;height:55%;}
+.avatar img{display:block;}
+.notification-setting{display:flex;align-items:center;justify-content:space-between;gap:16px;}
+.notification-menu{max-width:200px;margin:0;}
+.app-next-performance{background:color-mix(in srgb,var(--brand) 9%,var(--surface));border-radius:24px;}
+.app-next-performance .event-copy{padding:24px;}
+.next-label-row{display:flex;align-items:center;justify-content:space-between;color:var(--brand);gap:12px;font-size:.9rem;}
+.app-next-performance h3{margin:14px 0 16px;font-size:1.5rem;line-height:1.2;}
+.next-detail{display:flex;align-items:flex-start;gap:10px;margin:9px 0;color:var(--muted);}
+.next-detail svg{width:18px;height:18px;flex:none;display:block;}
+@media(min-width:960px){#settings{padding:40px;max-width:900px;}#settings>h2{margin-top:32px;}#tabs button:last-child{margin-top:8px;}}
+@media(max-width:959px){.conversation{touch-action:pan-y;}}
+
+@font-face{font-family:KmcCupertino;src:url('./assets/CupertinoIcons.ttf') format('truetype');font-display:block;}
+.cupertino-icon{font-family:KmcCupertino!important;font-weight:normal!important;font-style:normal!important;font-size:24px;line-height:1;display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;}
+.avatar .cupertino-icon{font-size:calc(var(--size)*.55);width:calc(var(--size)*.55);height:calc(var(--size)*.55);}
+.next-label-row strong{font-size:.8rem;letter-spacing:1px;}

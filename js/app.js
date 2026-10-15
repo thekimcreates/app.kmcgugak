@@ -20,6 +20,7 @@ import {
   joinedYear,
   validId,
   safeURL,
+  zoned,
 } from "./models.js";
 import {
   createChat,
@@ -158,29 +159,16 @@ function home() {
     if (next || practice) {
       content.push(section("Next Up"));
       if (next) {
-        const img = safeURL(next.highlightPhotoUrl);
-        content.push(
-          el("article", { class: "event-card" }, [
-            img ? el("img", { src: img, alt: "", loading: "lazy" }) : null,
-            el("div", { class: "event-copy" }, [
-              el("div", { class: "meta", text: "Performance" }),
-              el("h3", { text: venue(next) }),
-              el("div", { class: "meta", text: formatted(next) }),
-              el("div", { class: "event-actions" }, [
-                button(
-                  "View performance",
-                  () => openPerformance(next.id),
-                  "primary",
-                ),
-                button(
-                  "Directions",
-                  () => directions(next.locationAddress || venue(next)),
-                  "secondary",
-                ),
-              ]),
-            ]),
-          ]),
-        );
+        const date=new Date(next.date+"T12:00:00"),days=Math.round((Date.UTC(date.getFullYear(),date.getMonth(),date.getDate())-Date.UTC(now.getFullYear(),now.getMonth(),now.getDate()))/864e5);
+        const detail=(symbol,text)=>el("div",{class:"next-detail"},[el("span",{html:icon(symbol)}),el("span",{text})]);
+        content.push(el("article",{class:"event-card app-next-performance"},[el("div",{class:"event-copy"},[
+          el("div",{class:"next-label-row"},[el("strong",{text:"Performance"}),el("span",{text:days===0?"Today":days===1?"Tomorrow":`In ${days} days`})]),
+          el("h3",{text:venue(next),onClick:()=>openPerformance(next.id)}),
+          detail("calendar",date.toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric",year:"numeric"})),
+          detail("clock",next.timeTbd?"Time TBD":next.time?new Intl.DateTimeFormat(undefined,{hour:"numeric",minute:"2-digit",timeZone:next.timezone||"America/Los_Angeles",timeZoneName:"short"}).format(zoned(next.date,next.time,next.timezone||"America/Los_Angeles")):"Time unavailable"),
+          next.locationAddress?detail("pin",next.locationAddress):null,
+          el("div",{class:"event-actions"},[button("View performance",()=>openPerformance(next.id),"primary"),next.locationTbd?null:button("Directions",()=>directions(next.locationAddress||venue(next)),"secondary")]),
+        ])]));
       }
       if (practice)
         content.push(
@@ -264,7 +252,7 @@ function profile() {
   const page = document.querySelector("#profile");
   const toolbar = el("div", { class: "toolbar" }, [
     el("h1", { text: "Profile" }),
-    iconButton("gear", "Settings", settings),
+    matchMedia("(min-width:960px)").matches ? null : iconButton("gear", "Settings", settings),
   ]);
   if (!account()) {
     page.replaceChildren(
@@ -291,7 +279,7 @@ function profile() {
 }
 function drawTabs() {
   document.querySelector("#tabs").replaceChildren(
-    ...["home", "performances", "chat", "profile"].map((name) =>
+    ...["home", "performances", "chat", "profile", ...(matchMedia("(min-width:960px)").matches?["settings"]:[])].map((name) =>
       el(
         "button",
         {
@@ -317,7 +305,7 @@ function drawTabs() {
   );
 }
 function select(name, { fromHash = false } = {}) {
-  if (!["home", "performances", "chat", "profile"].includes(name)) return;
+  if (!["home", "performances", "chat", "profile", "settings"].includes(name)) return;
   const repeated = state.tab === name;
   if (state.tab === "chat" && name !== "chat") chat.closeRooms();
   state.tab = name;
@@ -333,6 +321,7 @@ function select(name, { fromHash = false } = {}) {
     if (repeated) window.scrollTo({ top: 0, behavior: "smooth" });
   }
   if (name === "profile") profile();
+  if (name === "settings") settings(true);
   if (name === "chat" && state.gateway)
     chat.render(document.querySelector("#chat"));
   if (name === "performances") {
@@ -405,7 +394,7 @@ function syncPerformanceInsets() {
           16,
   );
 }
-window.addEventListener("resize", syncPerformanceInsets);
+window.addEventListener("resize", () => {syncPerformanceInsets();drawTabs();profile();});
 function applyHash() {
   const raw = location.hash.slice(1);
   if (/\/performances\/?$/.test(location.pathname)) {
@@ -523,8 +512,10 @@ function login() {
     );
   layer.body.append(form);
 }
-function settings() {
-  const layer = sheet("Settings");
+function settings(asPage=false) {
+  const host=document.querySelector("#settings");
+  const layer=asPage?{body:host,close:()=>select("profile")}:sheet("Settings");
+  if(asPage)host.replaceChildren(el("h1",{text:"Settings"}));
   layer.body.append(el("h2", { text: "Account" }));
   if (account()) {
     layer.body.append(
@@ -563,14 +554,10 @@ function settings() {
   } else layer.body.append(button("Sign in", login, "settings-row"));
   layer.body.append(
     el("h2", { text: "Notifications" }),
-    button(
-      "Chat notification preferences",
-      () => (account() ? notificationPreferences(ctx) : login()),
-      "settings-row",
-    ),
     button("Test notifications", notificationTest, "settings-row"),
-    el("h2", { text: "Appearance" }),
   );
+  if(account())notificationPreferences(ctx,layer.body);
+  layer.body.append(el("h2", { text: "Appearance" }));
   const size = el("select", { "aria-label": "Text size" }, [
     el("option", { value: "1", text: "Standard text" }),
     el("option", { value: "1.15", text: "Larger text" }),

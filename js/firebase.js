@@ -1,5 +1,6 @@
 import { firebaseConfig } from "./config.js";
 import { dmId, participants, validId } from "./models.js";
+function rosterId(m){if(/^\d{2}[a-z0-9_-]+$/.test(m.id||""))return m.id;const year=String(m.service||"").match(/\b(?:19|20)(\d{2})\s*[-–—]/)?.[1];const parts=String(m.name||"").normalize("NFKD").toLowerCase().split(/\s+/).map(s=>s.replace(/[^a-z0-9]/g,"")).filter(Boolean);return year&&parts.length?`${year}${parts.at(-1)}${parts[0][0]}`:m.id;}
 export async function liveGateway() {
   const base = "https://www.gstatic.com/firebasejs/13.0.0/";
   const [a, h, f, s] = await Promise.all(
@@ -85,7 +86,7 @@ export async function liveGateway() {
       if (!name || name.length > 80)
         throw Error("Use a display name of 1–80 characters.");
       await h.updateProfile(auth.currentUser, { displayName: name });
-      return account(auth.currentUser);
+      const updated=await account(auth.currentUser);await gateway.prepare(updated);return updated;
     },
     async password(current, next) {
       if (next.length < 8)
@@ -101,7 +102,7 @@ export async function liveGateway() {
       await f.setDoc(ref(`memberProfiles/${auth.currentUser.uid}`), {
         photoBase64: bytes,
       });
-      return account(auth.currentUser);
+      const updated=await account(auth.currentUser);await gateway.prepare(updated);return updated;
     },
     watchPublic(callback, error) {
       let records = [],
@@ -126,7 +127,7 @@ export async function liveGateway() {
         f.onSnapshot(
           ref("siteContent/team"),
           (snap) => {
-            members = (snap.data()?.members || []).filter(
+            members = (snap.data()?.members || []).map(m=>({...m,id:rosterId(m)})).filter(
               (m) => validId(m.id) && m.name,
             );
             if (!snap.metadata.isFromCache) save();
@@ -159,12 +160,12 @@ export async function liveGateway() {
     },
     watchInbox(member, callback, error) {
       own(member.id);
-      let profiles = [],
+      let profiles = [], roster = [], avatarProfiles = new Map(),
         team = { id: "team", participants: [] },
         privateThreads = [];
       const emit = () =>
         callback({
-          profiles,
+          profiles: [...new Map([...roster,...profiles].map(p=>[p.id,p])).values()].map(p=>({...p,photoBase64:avatarProfiles.has(p.id)?avatarProfiles.get(p.id):p.photoBase64})),
           threads: [
             team,
             ...privateThreads.sort(
@@ -173,6 +174,8 @@ export async function liveGateway() {
           ],
         });
       const stops = [
+        f.onSnapshot(ref("siteContent/team"),snap=>{roster=(snap.data()?.members||[]).map(m=>({...m,id:rosterId(m)}));emit();},()=>{}),
+        f.onSnapshot(f.collection(db,"memberProfiles"),snap=>{avatarProfiles=new Map(snap.docs.map(d=>[d.id,d.data().photoBase64||""]));emit();},()=>{}),
         f.onSnapshot(
           f.collection(db, "chatMembers"),
           (snap) => {

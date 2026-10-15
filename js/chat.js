@@ -31,47 +31,22 @@ const device = () => {
   }
   return id;
 };
-export async function notificationPreferences(ctx) {
+export function notificationPreferences(ctx, host) {
   const member = ctx.account();
-  if (!member) return;
-  const layer = sheet("Chat notifications");
-  layer.body.append(
-    el("h2", { text: "Stay in the loop" }),
-    el("p", {
-      class: "muted",
-      text: "Choose who you’d like alerts from. Automatic background chat alerts are not enabled yet; we’ll save your choice for later.",
-    }),
-  );
-  const modes = [
-    ["all", "All members", "Team messages, groups, and direct messages"],
-    ["admins", "Admins only", "Messages sent by team admins"],
-    ["off", "Not now", "Keep notifications off"],
-  ];
-  for (const [mode, title, description] of modes)
-    layer.body.append(
-      button(
-        title,
-        async () => {
-          local.set("kmc.notify." + member.id, mode);
-          layer.close();
-          let permission = false;
-          if (mode !== "off" && "Notification" in window) {
-            try {
-              permission =
-                (await Notification.requestPermission()) === "granted";
-            } catch {}
-          }
-          try {
-            await ctx.gateway.preference(member.id, device(), mode, permission);
-          } catch (error) {
-            toast("Choice saved on this device. Cloud sync could not finish.");
-          }
-          toast("Notification choice saved.");
-        },
-        "settings-row",
-      ),
-      el("p", { class: "muted", text: description }),
-    );
+  if (!member || !host) return;
+  const current = local.get("kmc.notify."+member.id);
+  const selected = current === "admins" ? "admins" : "all";
+  if(current !== selected) local.set("kmc.notify."+member.id,selected);
+  const select = el("select", {"aria-label":"Chat notifications",class:"notification-menu"},[
+    el("option",{value:"all",text:"All members"}),el("option",{value:"admins",text:"Admins only"})]);
+  select.value=selected;
+  select.onchange=async()=>{
+    const mode=select.value;local.set("kmc.notify."+member.id,mode);
+    let permission=false;
+    if("Notification" in window){try{permission=(await Notification.requestPermission())==="granted";}catch{}}
+    try{await ctx.gateway.preference(member.id,device(),mode,permission);}catch{toast("Choice saved on this device.");}
+  };
+  host.append(el("label",{class:"settings-row notification-setting"},[el("strong",{text:"Chat notifications"}),select]));
 }
 export function notificationTest() {
   const layer = sheet("Test notifications"),
@@ -189,18 +164,7 @@ export function createChat(ctx) {
       }
     }
     draw();
-    if (!local.get("kmc.notify." + account.id)) {
-      setTimeout(() => {
-        if (
-          ctx.account()?.id === account.id &&
-          ctx.tab() === "chat" &&
-          !local.get("kmc.notify." + account.id)
-        ) {
-          local.set("kmc.notify." + account.id, "off");
-          notificationPreferences(ctx);
-        }
-      }, 100);
-    }
+    if (!["all","admins"].includes(local.get("kmc.notify."+account.id))) {local.set("kmc.notify."+account.id,"all");try{await ctx.gateway.preference(account.id,device(),"all",("Notification" in window)&&Notification.permission==="granted");}catch{}}
   }
   function showError(error) {
     container.replaceChildren(
@@ -228,9 +192,6 @@ export function createChat(ctx) {
       list = el("div");
     const toolbar = el("div", { class: "toolbar" }, [
       el("h1", { text: "Chat" }),
-      iconButton("bell", "Chat notifications", () =>
-        notificationPreferences(ctx),
-      ),
       iconButton("compose", "New message", compose),
     ]);
     function rows() {
@@ -263,7 +224,7 @@ export function createChat(ctx) {
             : null,
         ]);
         const image = isGroup(thread)
-          ? el("span", { class: "avatar", html: icon("chat") })
+          ? el("span", { class: "avatar chat-group-avatar", style:"--size:54px", html: `<span class="avatar-icon">${icon("group")}</span>` })
           : avatar(peer, 54);
         list.append(
           el(
@@ -443,6 +404,7 @@ export function createChat(ctx) {
       workspace: true,
       onClose: () => {
         stop?.();
+        mobileQuery.removeEventListener("change",syncClose);
         clearTimeout(draftTimer);
         local.set(key, input.value);
         for (const item of media.values())
@@ -455,6 +417,17 @@ export function createChat(ctx) {
     layer.panel.classList.add("conversation");
     layer.overlay.classList.add("conversation-layer");
     layer.threadId = thread.id;
+    const closeControl=layer.header.querySelector('button');
+    const syncClose=()=>{closeControl.hidden=matchMedia("(min-width: 960px)").matches;if(!closeControl.hidden)closeControl.innerHTML=icon("back");};syncClose();
+    const mobileQuery=matchMedia("(max-width: 959px)");mobileQuery.addEventListener("change",syncClose);
+    layer.overlay.addEventListener("pointerdown",e=>{
+      if(!mobileQuery.matches || e.clientX>innerWidth/2 || e.target.closest("textarea,input,button,a"))return;
+      const x=e.clientX,y=e.clientY;let offset=0,locked=false;
+      const move=event=>{const dx=event.clientX-x,dy=event.clientY-y;if(!locked && dx>12 && dx>Math.abs(dy)*1.3)locked=true;if(locked){event.preventDefault();offset=Math.max(0,dx);layer.panel.style.transform=`translateX(${offset}px)`;}};
+      const end=event=>{window.removeEventListener("pointermove",move);window.removeEventListener("pointerup",end);window.removeEventListener("pointercancel",cancel);if(locked && offset>innerWidth*.25){layer.close();}else{layer.panel.style.transform="";}};
+      const cancel=()=>{layer.panel.style.transform="";window.removeEventListener("pointermove",move);window.removeEventListener("pointerup",end);window.removeEventListener("pointercancel",cancel);};
+      window.addEventListener("pointermove",move,{passive:false});window.addEventListener("pointerup",end,{once:true});window.addEventListener("pointercancel",cancel,{once:true});
+    });
     draw();
     const input = el("textarea", {
       rows: "1",
@@ -470,14 +443,16 @@ export function createChat(ctx) {
       progress = el("progress", { max: "1", value: "0", hidden: true }),
       send = iconButton("send", "Send message", submit),
       add = iconButton("plus", "Add photos or files", attachments);
+    send.addEventListener("pointerdown",event=>event.preventDefault());
+    send.addEventListener("click",()=>input.focus({preventScroll:true}));
     send.classList.add("send-button");
     const update = () => {
       send.disabled = busy || (!input.value.trim() && !files.length);
-      input.disabled = busy;
+      input.readOnly = false;
       add.disabled = busy;
     };
     input.oninput = () => {
-      id = null;
+      if(!busy) id = null;
       update();
       input.style.height = "auto";
       input.style.height = Math.min(130, input.scrollHeight) + "px";
@@ -497,10 +472,6 @@ export function createChat(ctx) {
     };
     layer.header.append(
       iconButton("more", "Conversation details", details),
-      iconButton("chat", "Search messages", () => {
-        search.hidden = !search.hidden;
-        search.focus();
-      }),
     );
     layer.body.append(
       search,
@@ -727,7 +698,8 @@ export function createChat(ctx) {
     async function submit() {
       if (busy || !valid()) return;
       id ||= ctx.gateway.messageId(thread.id);
-      const text = input.value.trim(),
+      const sendingId=id, composed=input.value;
+      const text = composed.trim(),
         picked = [...files],
         snapshot = reply;
       busy = true;
@@ -741,7 +713,7 @@ export function createChat(ctx) {
           uploaded.push(
             await ctx.gateway.upload(
               thread.id,
-              id,
+              sendingId,
               member.id,
               i,
               picked[i],
@@ -752,18 +724,18 @@ export function createChat(ctx) {
         if (!valid()) return;
         await ctx.gateway.send(
           thread.id,
-          id,
+          sendingId,
           ctx.account(),
           text,
           uploaded,
           snapshot,
         );
         if (!valid()) return;
-        input.value = "";
+        if(input.value===composed)input.value="";else if(input.value.startsWith(composed))input.value=input.value.slice(composed.length).trimStart();
         files = [];
         reply = null;
         id = null;
-        local.set(key, "");
+        local.set(key, input.value);
         showFiles();
         showReply();
         input.style.height = "auto";
@@ -808,48 +780,9 @@ export function createChat(ctx) {
         );
     }
     function attachments() {
-      const choices = sheet("Add to your message");
-      for (const [label, accept, capture, multiple] of [
-        ["Photo Library", "image/*", null, true],
-        ["Take Photo", "image/*", "environment", false],
-        ["Choose Files", "", null, true],
-      ])
-        choices.body.append(
-          button(
-            label,
-            () => {
-              const picker = el("input", {
-                type: "file",
-                accept,
-                capture,
-                multiple,
-                hidden: true,
-              });
-              document.body.append(picker);
-              picker.onchange = () => {
-                const picked = [...picker.files];
-                picker.remove();
-                if (!valid()) return;
-                if (files.length + picked.length > 4) {
-                  toast("Choose up to four attachments.");
-                  return;
-                }
-                if (picked.some((f) => !f.size || f.size > 10485760)) {
-                  toast("Choose nonempty files under 10 MB.");
-                  return;
-                }
-                files.push(...picked);
-                id = null;
-                showFiles();
-                update();
-                choices.close();
-              };
-              picker.addEventListener("cancel", () => picker.remove());
-              picker.click();
-            },
-            "settings-row",
-          ),
-        );
+      const picker=el("input",{type:"file",multiple:true,hidden:true});document.body.append(picker);
+      picker.onchange=()=>{const picked=[...picker.files];picker.remove();if(!valid())return;if(files.length+picked.length>4){toast("Choose up to four attachments.");return;}if(picked.some(f=>!f.size||f.size>10485760)){toast("Choose nonempty files under 10 MB.");return;}files.push(...picked);id=null;showFiles();update();input.focus({preventScroll:true});};
+      picker.addEventListener("cancel",()=>picker.remove(),{once:true});picker.click();
     }
     function options(message) {
       const choice = sheet("Message actions");
@@ -977,24 +910,7 @@ export function createChat(ctx) {
       const selected = members().filter(
         (m) => thread.id === "team" || thread.participants?.includes(m.id),
       );
-      const mutedKey = `kmc.mute.${member.id}.${thread.id}`,
-        mute = el("input", {
-          type: "checkbox",
-          checked: local.get(mutedKey) === "true",
-        });
-      mute.onchange = () => local.set(mutedKey, mute.checked);
-      details.body.append(
-        el("p", { class: "muted", text: selected.length + " members" }),
-        el("label", { class: "settings-row" }, [
-          mute,
-          el("span", { text: "Mute on this device (saved for future alerts)" }),
-        ]),
-        button(
-          "Notification preferences",
-          () => notificationPreferences(ctx),
-          "settings-row",
-        ),
-      );
+      details.body.append(el("p",{class:"muted",text:selected.length+" members"}));
       for (const person of selected)
         details.body.append(
           el(

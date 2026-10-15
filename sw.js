@@ -1,4 +1,4 @@
-const VERSION = "kmc-web-shell-v4-native-routes";
+const VERSION = "kmc-web-shell-v5-chat-polish";
 const SHELL = [
   "./",
   "./index.html",
@@ -18,6 +18,7 @@ const SHELL = [
   "./assets/branding/kmc-gugak-full-logo.png",
   "./privacy.html",
   "./assets/icon.svg",
+  "./assets/CupertinoIcons.ttf",
 ];
 self.addEventListener("install", (event) =>
   event.waitUntil(caches.open(VERSION).then((cache) => cache.addAll(SHELL))),

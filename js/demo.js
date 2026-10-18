@@ -80,7 +80,7 @@ export function demoGateway() {
       if(!account)throw Error('Sign in first.');
       const p=privateProfiles.get(account.id)||{preferences:{},available:{email:false,sms:false}};
       if(action==='get')return structuredClone(p);
-      if(action==='checklist')p.checklistDone=data.done===true;
+      if(action==='checklist')return {};
       else if(action==='preferences')p.preferences={...data.preferences};
       else throw Error('Preview only. No email or text is sent.');
       privateProfiles.set(account.id,p);return {};

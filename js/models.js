@@ -142,3 +142,14 @@ export const safeURL = (value) => {
     return "";
   }
 };
+
+export function practiceCountdown(practice,now=new Date()){
+ if(now>=practice.start)return now<practice.end?'Now':'Finished';
+ const p=parts(now),s=parts(practice.start);
+ const days=(Date.UTC(+s.year,+s.month-1,+s.day)-Date.UTC(+p.year,+p.month-1,+p.day))/864e5;
+ if(days===1)return 'Tomorrow';
+ const minutes=Math.max(1,Math.floor((practice.start-now)/60000));
+ if(minutes<60)return `${minutes} minute${minutes===1?'':'s'}`;
+ if(minutes<1440){const hours=Math.ceil(minutes/60);return `${hours} hour${hours===1?'':'s'}`;}
+ return `${days} days`;
+}

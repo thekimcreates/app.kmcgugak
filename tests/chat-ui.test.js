@@ -42,15 +42,13 @@ test('composer keeps focus, preserves the next draft, and uses a direct native f
  let loaded=[];const stop=gateway.watchMessages('team',60,rows=>loaded=rows);await tick();const own=loaded.find(m=>m.senderId===member.id);assert.ok(body.querySelectorAll('.day-label').every(n=>/\d.*\d:\d/.test(n.textContent)));await gateway.remove('team',own);await tick();assert.ok(!body.querySelector('.messages').textContent.includes('Message removed'));stop();await body.querySelector('[aria-label="Conversation details"]').fire('click');assert.ok(body.querySelectorAll('.member-row').every(n=>n.tagName==='DIV'));assert.ok(!body.textContent.includes('Mute on this device'));chat.reset();
 });
 
-test('welcome checklist persists completion; reset screen offers contact setup and verified destinations',async()=>{
- const {memberSetup}=await import('../js/member-setup.js');
+test('Home checklist derives completion, cannot be dismissed and reset offers contact setup',async()=>{
+ const {memberSetup,homeChecklist}=await import('../js/member-setup.js');
  let member={id:'member1',photoBase64:''};const calls=[];
- let profile={available:{email:true,sms:true},preferences:{}};
+ let profile={available:{email:true,sms:true},preferences:{},checklistDone:true};
  const ctx={account:()=>member,gateway:{memberSettings:async(action,data)=>{calls.push({action,data});return action==='get'?profile:{};}}};
- const welcome=memberSetup(ctx,{checklist:true});await tick();
- assert.match(welcome.body.textContent,/0 of 3/);assert.match(welcome.body.textContent,/Everything here is optional/);
- await welcome.body.querySelectorAll('button').find(b=>b.textContent==='All set — let’s go!').fire('click');assert.ok(calls.some(c=>c.action==='checklist'&&c.data.done===true));
- const missing=memberSetup(ctx,{reset:true});await tick();assert.match(missing.body.textContent,/Add and verify/);assert.equal(missing.body.querySelectorAll('button').filter(b=>b.textContent==='Add').length,2);missing.close(true);
- profile={...profile,email:{value:'member@example.test',verified:true}};
- const reset=memberSetup(ctx,{reset:true});await tick();const send=reset.body.querySelectorAll('button').find(b=>b.textContent==='Send reset link by email');assert.ok(send);await send.fire('click');assert.ok(calls.some(c=>c.action==='reset'&&c.data.channel==='email'));reset.close(true);
+ const welcome=homeChecklist(ctx,()=>{});body.append(welcome);await tick();
+ assert.match(welcome.textContent,/0 of 3/);assert.ok(!welcome.textContent.includes('All set'));assert.ok(!welcome.textContent.includes('later'));
+ profile.email={verified:true,value:'member@example.test'};const next=homeChecklist(ctx,()=>{});body.append(next);await tick();assert.match(next.textContent,/1 of 3/);
+ const reset=memberSetup(ctx,{reset:true});await tick();const send=reset.body.querySelectorAll('button').find(b=>b.textContent==='Send reset link by email');assert.ok(send);await send.fire('click');assert.ok(calls.some(c=>c.action==='reset'&&c.data.channel==='email'));
 });

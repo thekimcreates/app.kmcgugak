@@ -1,4 +1,4 @@
-import {memberSetup,promptChecklist} from './member-setup.js';
+import {memberSetup,homeChecklist} from './member-setup.js';
 import { tabPath, readRoute, routeURL } from "./routes.js";
 import {
   el,
@@ -18,6 +18,7 @@ import {
   upcoming,
   formatted,
   visiblePractice,
+  practiceCountdown,
   practiceAddress,
   joinedYear,
   validId,
@@ -180,7 +181,7 @@ function home() {
         content.push(
           el("article", { class: "event-card" }, [
             el("div", { class: "event-copy" }, [
-              el("div", { class: "meta", text: "Practice" }),
+              el("div", { class: "meta", text: `Practice · ${practiceCountdown(practice,now)}` }),
               el("h3", {
                 text: practice.start.toLocaleDateString(undefined, {
                   weekday: "long",
@@ -200,6 +201,7 @@ function home() {
           ]),
         );
     }
+    if(account())content.push(homeChecklist(ctx,photo));
     const count = recents().length,
       year = joinedYear(member, state.members);
     content.push(
@@ -462,7 +464,7 @@ function commitAccount(member, error) {
   if (state.tab === "settings") settings(true);
   if (state.tab === "chat") chat.render(document.querySelector("#chat"));
   if (error) toast(failure(error));
-  if(member)promptChecklist(ctx,photo);
+
 }
 function login() {
   const layer = sheet("Member sign-in"),
@@ -540,7 +542,7 @@ function settings(asPage=false) {
     const view=sheet("Your account");view.body.classList.add("account-settings");
     view.body.append(el("div",{class:"account-identity"},[avatar(account(),64),el("h2",{text:account()?.name||""})]));
     const box=el("div",{class:"settings-group"});view.body.append(box);
-    box.append(menuRow("profile","Display name",rename),menuRow("photo","Profile picture",photo),menuRow("lock","Password",changePassword),menuRow("profile","Email & phone number",()=>memberSetup(ctx)),menuRow("check","Your welcome checklist",()=>memberSetup(ctx,{photo,checklist:true})));
+    box.append(menuRow("profile","Display name",rename),menuRow("photo","Profile picture",photo),menuRow("lock","Password",changePassword),menuRow("profile","Email & phone number",()=>memberSetup(ctx)));
     const parent=el("input",{type:"checkbox",checked:localStorage.getItem(key("parent"))==="true",role:"switch","aria-label":"Use parent greeting"});
     parent.onchange=()=>{localStorage.setItem(key("parent"),parent.checked);home();};
     box.append(el("label",{class:"settings-row settings-menu-row"},[el("span",{class:"settings-symbol",html:icon("group")}),el("strong",{class:"settings-copy",text:"Use parent greeting"}),parent]));
@@ -779,3 +781,9 @@ document.addEventListener("visibilitychange", () => {
 });
 if ("serviceWorker" in navigator)
   navigator.serviceWorker.register("./sw.js").catch(() => {});
+
+window.addEventListener('kmc-member-settings',()=>home());
+
+const appOpenLink=el('a',{class:'open-native-app',text:'Open in KMC Gugak'});
+function updateAppOpenLink(){const id=location.hash.slice(1);appOpenLink.href=/^[A-Za-z0-9_-]{1,128}$/.test(id)?`kmcgugak://performance/${id}`:'kmcgugak://performances';}
+updateAppOpenLink();window.addEventListener('hashchange',updateAppOpenLink);appOpenLink.addEventListener('click',updateAppOpenLink);document.querySelector('#performances').append(appOpenLink);

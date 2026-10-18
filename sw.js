@@ -1,4 +1,4 @@
-const VERSION = "kmc-web-shell-v8-member-setup";
+const VERSION = "kmc-web-shell-v9-performance-detail";
 const SHELL = [
   "./",
   "./index.html",

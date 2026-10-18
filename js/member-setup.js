@@ -1,7 +1,7 @@
 import {el,button,sheet,toast,failure} from './ui.js';
 export function memberSetup(ctx,{photo,checklist=false,reset=false}={}) {
   const uid=ctx.account()?.id;if(!uid)return;
-  const layer=sheet(checklist?'Make yourself at home':reset?'Reset password':'Contact & notifications');
+  const layer=sheet(reset?'Reset password':'Contact & notifications',{onClose:()=>window.dispatchEvent(new Event('kmc-member-settings'))});
   let data,busy=false;
   async function request(action,data={}){if(ctx.account()?.id!==uid)throw Error('Your account changed. Reopen Settings.');const result=await ctx.gateway.memberSettings(action,data);if(ctx.account()?.id!==uid)throw Error('Your account changed. Reopen Settings.');return result;}
   const error=el('p',{class:'error',role:'status'});
@@ -44,11 +44,25 @@ export function memberSetup(ctx,{photo,checklist=false,reset=false}={}) {
       }
       layer.body.append(group);
     }
-    if(checklist)layer.body.append(button('All set — let’s go!',()=>run(async()=>{await request('checklist',{done:true});layer.close();}),'primary'),button('I’ll explore this later',()=>layer.close()));
+
     layer.body.append(error);
   }
   layer.body.append(el('p',{text:'Loading your settings…'}),error);run(load);
   return layer;
 }
-const prompted=new Set();
-export async function promptChecklist(ctx,photo){const uid=ctx.account()?.id;if(!uid||prompted.has(uid))return;prompted.add(uid);try{const p=await ctx.gateway.memberSettings('get');if(ctx.account()?.id===uid&&!p.checklistDone)memberSetup(ctx,{photo,checklist:true});}catch{prompted.delete(uid);}}
+
+export function homeChecklist(ctx,photo){
+ const uid=ctx.account()?.id,box=el('section',{class:'settings-group home-checklist','aria-label':'Welcome checklist'});
+ if(!uid)return box;
+ async function load(){
+  const picture=!!ctx.account()?.photoBase64;
+  box.replaceChildren(el('h2',{text:'Make yourself at home'}),el('p',{text:'Checking your progress…'}));
+  try{
+   const data=await ctx.gateway.memberSettings('get');if(ctx.account()?.id!==uid||!box.isConnected)return;
+   const email=data.email?.verified===true,phone=data.sms?.verified===true;
+   box.replaceChildren(el('h2',{text:'Make yourself at home'}),el('p',{class:'muted',text:`${Number(picture)+Number(email)+Number(phone)} of 3 complete`}));
+   for(const [done,title,action] of [[picture,'Add a profile picture',photo],[email,'Verify your email',()=>memberSetup(ctx)],[phone,'Verify your phone number',()=>memberSetup(ctx)]])box.append(button(`${done?'✓':'○'} ${title}`,action,'settings-row'));
+  }catch{if(ctx.account()?.id===uid){box.replaceChildren(el('h2',{text:'Make yourself at home'}),el('p',{text:'Could not check your contact details.'}),button('Try again',load));}}
+ }
+ queueMicrotask(load);return box;
+}

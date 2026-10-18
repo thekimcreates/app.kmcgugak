@@ -50,6 +50,19 @@ export async function liveGateway() {
     updatedAt: d.data()?.updatedAt?.toDate(),
   });
   const gateway = {
+    async memberSettings(action,data={}) {
+      if(!auth.currentUser)throw Error('Please sign in again.');
+      const uid=auth.currentUser.uid;
+      const response=await fetch(`https://us-central1-${firebaseConfig.projectId}.cloudfunctions.net/memberSettings`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${await auth.currentUser.getIdToken()}`},body:JSON.stringify({data:{action,...data}})});
+      let result;try{result=await response.json();}catch{throw Error('Member settings are unavailable. Please try again later.');}
+      own(uid);
+      if(result.error)throw Error(result.error.message||'Please try again.');
+      return result.result||{};
+    },
+    async confirmPassword(password){
+      const user=auth.currentUser;if(!user)throw Error('Please sign in again.');
+      await h.reauthenticateWithCredential(user,h.EmailAuthProvider.credential(user.email,password));
+    },
     onAccount(callback) {
       return h.onIdTokenChanged(auth, async (user) => {
         const generation = ++epoch;

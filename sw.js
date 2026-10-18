@@ -1,4 +1,4 @@
-const VERSION = "kmc-web-shell-v7-cache-receipts";
+const VERSION = "kmc-web-shell-v8-member-setup";
 const SHELL = [
   "./",
   "./index.html",
@@ -14,6 +14,7 @@ const SHELL = [
   "./js/models.js",
   "./js/routes.js",
   "./js/receipts.js",
+  "./js/member-setup.js",
   "./js/ui.js",
   "./js/chat.js",
   "./js/config.js",

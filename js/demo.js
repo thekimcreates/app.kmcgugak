@@ -1,6 +1,7 @@
 import { dateKey, dmId, participants } from "./models.js";
 export function demoGateway() {
   let account = null;
+  const privateProfiles=new Map();
   const receipts=new Map(), readWatchers=new Map();
   const callbacks = new Set(),
     inboxes = new Set(),
@@ -74,6 +75,16 @@ export function demoGateway() {
     emitInbox();
   };
   return {
+    async confirmPassword(){if(!account)throw Error('Sign in first.');},
+    async memberSettings(action,data={}){
+      if(!account)throw Error('Sign in first.');
+      const p=privateProfiles.get(account.id)||{preferences:{},available:{email:false,sms:false}};
+      if(action==='get')return structuredClone(p);
+      if(action==='checklist')p.checklistDone=data.done===true;
+      else if(action==='preferences')p.preferences={...data.preferences};
+      else throw Error('Preview only. No email or text is sent.');
+      privateProfiles.set(account.id,p);return {};
+    },
     watchReaders(id,cb){const watchers=readWatchers.get(id)||new Set();watchers.add(cb);readWatchers.set(id,watchers);queueMicrotask(()=>cb(receipts.get(id)||{}));return ()=>watchers.delete(cb);},
     async markRead(id,memberId,through){const rows={...(receipts.get(id)||{}),[memberId]:+through};receipts.set(id,rows);for(const cb of readWatchers.get(id)||[])cb(rows);},
     onAccount(cb) {

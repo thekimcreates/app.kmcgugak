@@ -1,3 +1,4 @@
+import {memberSetup,promptChecklist} from './member-setup.js';
 import { tabPath, readRoute, routeURL } from "./routes.js";
 import {
   el,
@@ -25,7 +26,6 @@ import {
 } from "./models.js";
 import {
   createChat,
-  notificationPreferences,
   notificationTest,
 } from "./chat.js";
 const demo = new URLSearchParams(location.search).get("demo") === "1";
@@ -462,6 +462,7 @@ function commitAccount(member, error) {
   if (state.tab === "settings") settings(true);
   if (state.tab === "chat") chat.render(document.querySelector("#chat"));
   if (error) toast(failure(error));
+  if(member)promptChecklist(ctx,photo);
 }
 function login() {
   const layer = sheet("Member sign-in"),
@@ -539,14 +540,14 @@ function settings(asPage=false) {
     const view=sheet("Your account");view.body.classList.add("account-settings");
     view.body.append(el("div",{class:"account-identity"},[avatar(account(),64),el("h2",{text:account()?.name||""})]));
     const box=el("div",{class:"settings-group"});view.body.append(box);
-    box.append(menuRow("profile","Display name",rename),menuRow("photo","Profile picture",photo),menuRow("lock","Password",changePassword));
+    box.append(menuRow("profile","Display name",rename),menuRow("photo","Profile picture",photo),menuRow("lock","Password",changePassword),menuRow("profile","Email & phone number",()=>memberSetup(ctx)),menuRow("check","Your welcome checklist",()=>memberSetup(ctx,{photo,checklist:true})));
     const parent=el("input",{type:"checkbox",checked:localStorage.getItem(key("parent"))==="true",role:"switch","aria-label":"Use parent greeting"});
     parent.onchange=()=>{localStorage.setItem(key("parent"),parent.checked);home();};
     box.append(el("label",{class:"settings-row settings-menu-row"},[el("span",{class:"settings-symbol",html:icon("group")}),el("strong",{class:"settings-copy",text:"Use parent greeting"}),parent]));
     const signout=menuRow("signout","Sign out",async()=>{try{await state.gateway.logout();closeAll();select("home");toast("Signed out.");}catch(e){toast(failure(e));}});signout.classList.add("danger");view.body.append(el("div",{class:"settings-group settings-signout"},[signout]));
   }
   const notifications=group("Notifications");
-  if(member){notificationPreferences(ctx,notifications);const label=notifications.querySelector('.notification-setting');label.insertBefore(el("span",{class:"settings-symbol",html:icon("chat")}),label.firstChild);}
+  if(member)notifications.append(menuRow("chat","Email & text notifications",()=>memberSetup(ctx)));
   notifications.append(menuRow("chat","Test notifications",notificationTest));
   const appearance=group("Appearance"), size=el("select",{"aria-label":"Text size"},[
     el("option",{value:"1",text:"Standard"}),el("option",{value:"1.15",text:"Larger"}),el("option",{value:"1.3",text:"Largest"})]);
@@ -595,6 +596,7 @@ function changePassword() {
     current = field("Current passcode", "password"),
     next = field("New passcode", "password"),
     confirm = field("Confirm new passcode", "password");
+  layer.body.append(button("Send a password reset link",()=>memberSetup(ctx,{reset:true})));
   next.input.autocomplete = confirm.input.autocomplete = "new-password";
   layer.body.append(
     current.node,

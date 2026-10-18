@@ -32,23 +32,6 @@ const device = () => {
   }
   return id;
 };
-export function notificationPreferences(ctx, host) {
-  const member = ctx.account();
-  if (!member || !host) return;
-  const current = local.get("kmc.notify."+member.id);
-  const selected = current === "admins" ? "admins" : "all";
-  if(current !== selected) local.set("kmc.notify."+member.id,selected);
-  const select = el("select", {"aria-label":"Chat notifications",class:"notification-menu"},[
-    el("option",{value:"all",text:"All members"}),el("option",{value:"admins",text:"Admins only"})]);
-  select.value=selected;
-  select.onchange=async()=>{
-    const mode=select.value;local.set("kmc.notify."+member.id,mode);
-    let permission=false;
-    if("Notification" in window){try{permission=(await Notification.requestPermission())==="granted";}catch{}}
-    try{await ctx.gateway.preference(member.id,device(),mode,permission);}catch{toast("Choice saved on this device.");}
-  };
-  host.append(el("label",{class:"settings-row notification-setting"},[el("strong",{text:"Chat notifications"}),select]));
-}
 export function notificationTest() {
   const layer = sheet("Test notifications"),
     list = el("ol", { class: "checklist" }),
@@ -165,7 +148,7 @@ export function createChat(ctx) {
       }
     }
     draw();
-    if (!["all","admins"].includes(local.get("kmc.notify."+account.id))) {local.set("kmc.notify."+account.id,"all");try{await ctx.gateway.preference(account.id,device(),"all",("Notification" in window)&&Notification.permission==="granted");}catch{}}
+    if (local.get("kmc.notify."+account.id)!=="all") {local.set("kmc.notify."+account.id,"all");try{await ctx.gateway.preference(account.id,device(),"all",("Notification" in window)&&Notification.permission==="granted");}catch{}}
   }
   function showError(error) {
     container.replaceChildren(

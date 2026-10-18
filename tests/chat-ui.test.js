@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 const desktop={value:true};
 class Element {
  constructor(tag){this.tagName=tag.toUpperCase();this.nodes=[];this.attrs={};this.events={};this.style={};this.value='';this.hidden=false;this.disabled=false;this.scrollHeight=200;this.clientHeight=100;this.scrollTop=0;this.className='';this.classList={add:(...a)=>{this.className=[...new Set([...this.className.split(' ').filter(Boolean),...a])].join(' ');},remove:(...a)=>{this.className=this.className.split(' ').filter(x=>!a.includes(x)).join(' ');},contains:a=>this.className.split(' ').includes(a),toggle:(a,v)=>{const yes=v??!this.classList.contains(a);yes?this.classList.add(a):this.classList.remove(a);}};}
+ get isConnected(){return this===document.body||!!this.parentNode?.isConnected;}
  get children(){return this.nodes.filter(n=>n instanceof Element);}get offsetParent(){return this.parentNode;}get firstChild(){return this.nodes[0];}
  set textContent(v){this.nodes=[String(v)];}get textContent(){return this.nodes.map(n=>n instanceof Element?n.textContent:String(n)).join('');}
  append(...nodes){for(const n of nodes){if(n==null)continue;if(n instanceof Element){n.remove();n.parentNode=this;}this.nodes.push(n);}}
@@ -39,4 +40,17 @@ test('composer keeps focus, preserves the next draft, and uses a direct native f
  const sending=send.fire('click');await new Promise(r=>setTimeout(r,0));assert.equal(input.disabled,false);assert.equal(input.readOnly,false);input.value='FirstNext';await input.fire('input');release();await sending;assert.equal(input.value,'Next');assert.equal(document.activeElement,input);
  await body.querySelector('[aria-label="Add photos or files"]').fire('click');assert.equal(body.querySelectorAll('.panel').length,1);assert.equal(body.querySelector('input').tagName,'INPUT');assert.ok(body.querySelectorAll('input').some(n=>n.getAttribute('type')==='file'));
  let loaded=[];const stop=gateway.watchMessages('team',60,rows=>loaded=rows);await tick();const own=loaded.find(m=>m.senderId===member.id);assert.ok(body.querySelectorAll('.day-label').every(n=>/\d.*\d:\d/.test(n.textContent)));await gateway.remove('team',own);await tick();assert.ok(!body.querySelector('.messages').textContent.includes('Message removed'));stop();await body.querySelector('[aria-label="Conversation details"]').fire('click');assert.ok(body.querySelectorAll('.member-row').every(n=>n.tagName==='DIV'));assert.ok(!body.textContent.includes('Mute on this device'));chat.reset();
+});
+
+test('welcome checklist persists completion; reset screen offers contact setup and verified destinations',async()=>{
+ const {memberSetup}=await import('../js/member-setup.js');
+ let member={id:'member1',photoBase64:''};const calls=[];
+ let profile={available:{email:true,sms:true},preferences:{}};
+ const ctx={account:()=>member,gateway:{memberSettings:async(action,data)=>{calls.push({action,data});return action==='get'?profile:{};}}};
+ const welcome=memberSetup(ctx,{checklist:true});await tick();
+ assert.match(welcome.body.textContent,/0 of 3/);assert.match(welcome.body.textContent,/Everything here is optional/);
+ await welcome.body.querySelectorAll('button').find(b=>b.textContent==='All set — let’s go!').fire('click');assert.ok(calls.some(c=>c.action==='checklist'&&c.data.done===true));
+ const missing=memberSetup(ctx,{reset:true});await tick();assert.match(missing.body.textContent,/Add and verify/);assert.equal(missing.body.querySelectorAll('button').filter(b=>b.textContent==='Add').length,2);missing.close(true);
+ profile={...profile,email:{value:'member@example.test',verified:true}};
+ const reset=memberSetup(ctx,{reset:true});await tick();const send=reset.body.querySelectorAll('button').find(b=>b.textContent==='Send reset link by email');assert.ok(send);await send.fire('click');assert.ok(calls.some(c=>c.action==='reset'&&c.data.channel==='email'));reset.close(true);
 });
